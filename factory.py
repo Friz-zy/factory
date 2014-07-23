@@ -45,7 +45,6 @@ import argparse
 
 import gevent
 from gevent.subprocess import Popen, PIPE
-from gevent.local import local
 
 # default variables
 global_env = {'interactive': True,
@@ -60,7 +59,11 @@ global_env = {'interactive': True,
               'ssh_binary': 'ssh',
               'ssh_port': 22,}
 
-connect_env = local()
+class Empty():
+    def __init__(self):
+        pass
+
+connect_env = Empty()
 
 
 def run(command, use_sudo=False, user='', group='', freturn=False):
@@ -186,39 +189,49 @@ def main():
     
     if global_env['interactive']:
         for host in hosts:
-            run_tasks_on_host(host, {function: fargs})
+            run_tasks_on_host(host, [(function, fargs)])
 
 def run_tasks_on_host(connect_string, tasks, con_args=''):
     """
     """
-    connect_env.connect_string = connect_string
-    if global_env['split_user'] in connect_string:
-        connect_env.user, connect_string = connect_string.split(global_env['split_user'])
-    else:
-        connect_env.user = getuser()
-    if global_env['split_port'] in connect_string:
-        connect_env.host, connect_env.port = connect_string.split(global_env['split_port'])
-    else:
-        connect_env.host = connect_string
-        connect_env.port = global_env['ssh_port']
-    connect_env.con_args = con_args
-    connect_env.logger = logging.getLogger(''.join((connect_env.user,
-                                                    global_env['split_user'],
-                                                    connect_env.host)))
-    #TODO: checking first connection via ssh
-    connect_env.check_is_root = check_is_root()
-    # if uses greenlets
-    #if not global_env['interactive']:
-    #    gevent.sleep(0)
-    
-    for function in tasks.keys():
-        global_env['functions'][function](tasks[function])
-    
-    #TODO: find way to import globals in gevent.spawn tread
-    #threads = [gevent.spawn(global_env['functions'][function], tasks[function]) for function in tasks.keys()]
-    #gevent.joinall(threads)
-    
-    
+    with set_connect_env(connect_string, con_args) as connect_env:
+        #TODO: checking first connection via ssh
+        connect_env.check_is_root = check_is_root()
+        if not global_env['interactive']:
+            gevent.sleep(0)
+
+        threads = [gevent.spawn(global_env['functions'][function], args) for function, args in tasks]
+        gevent.joinall(threads)
+
+
+class set_connect_env():
+    def __init__(self, connect_string, con_args=''):
+        self.cs = connect_string
+        self.ca = con_args
+
+    def __enter__(self):
+        connect_string = self.cs
+        con_args = self.ca
+        connect_env.connect_string = connect_string
+        if global_env['split_user'] in connect_string:
+            connect_env.user, connect_string = connect_string.split(global_env['split_user'])
+        else:
+            connect_env.user = getuser()
+        if global_env['split_port'] in connect_string:
+            connect_env.host, connect_env.port = connect_string.split(global_env['split_port'])
+        else:
+            connect_env.host = connect_string
+            connect_env.port = global_env['ssh_port']
+        connect_env.con_args = con_args
+        connect_env.logger = logging.getLogger(''.join((connect_env.user,
+                                                        global_env['split_user'],
+                                                        connect_env.host)))
+        return connect_env
+
+    def __exit__(self, type, value, traceback):
+        connect_env = Empty()
+
+
 if __name__ == '__main__':
     main()
 
