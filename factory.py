@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 """Factory provides api for local and nonlocal running of functions,scripts, etc via shh and *sh."""
+from __future__ import with_statement
 """
 Copyright (c) by Filipp Kucheryavy aka Frizzy <filipp.s.frizzy@gmail.com>
 All rights reserved.
@@ -42,6 +43,11 @@ from socket import gethostname
 from getpass import getuser
 import logging
 import argparse
+
+major, minor, micro, releaselevel, serial = sys.version_info
+if (major,minor) < (2,5):
+    # provide advice on getting version 2.5 or higher.
+    sys.exit(2)
 
 import gevent
 from gevent.subprocess import Popen, PIPE
@@ -186,7 +192,6 @@ def main():
     function, fargs = args.function.split(global_env['split_function'])
     #TODO: find right way to split args
     fargs = fargs.split(global_env['split_args'])
-    
     if global_env['interactive']:
         for host in hosts:
             run_tasks_on_host(host, [(function, fargs)])
