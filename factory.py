@@ -77,6 +77,9 @@ def run(command, use_sudo=False, user='', group='', freturn=False):
     """
     logger = connect_env.logger
     interactive = global_env['interactive']
+    host_string = ''.join((connect_env.user,
+                           '@',
+                           connect_env.host))
     # run as root
     if use_sudo:
         if not connect_env.run_as_root:
@@ -97,22 +100,14 @@ def run(command, use_sudo=False, user='', group='', freturn=False):
     # open new connect
     if connect_env.host in global_env['localhost']:
         p = Popen(command, stdout=PIPE, stderr=PIPE, stdin=PIPE, shell=True)
-        end = ''
     else:
         scommand = [global_env['ssh_binary'],
                             '-p',
                             str(connect_env.port),
-                            ''.join((connect_env.user,
-                                    '@',
-                                    connect_env.host)),
-                            connect_env.con_args]
+                            host_string,
+                            connect_env.con_args,
+                            command]
         p = Popen(scommand, stdout=PIPE, stderr=PIPE, stdin=PIPE)
-        if not p.stderr.readline():
-            end = p.stdout.readline().rstrip()[-1][-1]
-            p.stdin.writeline(command)
-            p.stdin.flash()
-        else:
-            pass
     # run another command
     if not interactive:
         gevent.sleep(0)
@@ -120,31 +115,29 @@ def run(command, use_sudo=False, user='', group='', freturn=False):
     sout = ' '
     sumout = ''
     sumerr = ''
-    #TODO: checking popen status of execution
-    while sout:
+    while sout or p.poll() is None:
         serr = p.stderr.readline()
         if serr:
             sumerr += serr
             logger.info('err: %s', serr)
             if interactive:
-                sys.stderr.write('%s err: %s' % (connect_env.connect_string, serr))
+                sys.stderr.write('%s err: %s' % (host_string, serr))
                 sys.stderr.flush()
         sout = p.stdout.readline()
         if sout:
-            if end and sout.readline().rstrip()[-1][-1] == end:
-                break
             sumout += sout
             logger.info('out: %s', sout)
             #TODO: y\n; password
             if interactive:
-                sys.stdout.write('%s out: %s' % (connect_env.connect_string, sout))
+                sys.stdout.write('%s out: %s' % (host_string, sout))
                 sys.stderr.flush()
         if not interactive:
             gevent.sleep(0)
-    #TODO: popen return code
-    #status = p.status()
-    status = 0
-    p.kill()
+    #TODO: check returncode if returncode==None
+    status = p.returncode
+    if p.poll() is None:
+        p.terminate()
+        p.kill()
     if freturn:
         return (sumout, sumerr, status)
     return sumout
@@ -189,12 +182,23 @@ def main():
         hosts = ['localhost']
     else:
         hosts = args.hosts.split(global_env['split_hosts'])
-    function, fargs = args.function.split(global_env['split_function'])
-    #TODO: find right way to split args
-    fargs = fargs.split(global_env['split_args'])
+    # TODO: rewrite parsing of arguments
+    function, args = args.function.split(global_env['split_function'])
+    if len(args.split(global_env['split_function'])) > 1:
+        args, kwargs = args.split(global_env['split_function'])
+        #TODO: find right way to split args
+        fargs = args.split(global_env['split_args'])
+        kwargs = kwargs.split(global_env['split_args'])
+        fkwargs = {}
+        for i in kwargs:
+            a, b = i.split('=')
+            fkwargs[a] = b
+    else:
+        fargs, fkwargs = args.split(global_env['split_function']), {}
+
     if global_env['interactive']:
         for host in hosts:
-            run_tasks_on_host(host, [(function, fargs)])
+            run_tasks_on_host(host, [(function, fargs, fkwargs)])
 
 def run_tasks_on_host(connect_string, tasks, con_args=''):
     """
@@ -204,8 +208,7 @@ def run_tasks_on_host(connect_string, tasks, con_args=''):
         connect_env.check_is_root = check_is_root()
         if not global_env['interactive']:
             gevent.sleep(0)
-
-        threads = [gevent.spawn(global_env['functions'][function], args) for function, args in tasks]
+        threads = [gevent.spawn(global_env['functions'][function], *args, **kwargs) for function, args, kwargs in tasks]
         gevent.joinall(threads)
 
 
