@@ -199,6 +199,14 @@ def main():
     if global_env['interactive']:
         for host in hosts:
             run_tasks_on_host(host, [(function, fargs, fkwargs)])
+    else:
+        threads = []
+        for host in hosts:
+            args = (host, [(function, fargs, fkwargs)])
+            kwargs = {}
+            threads.append(gevent.spawn(run_tasks_on_host, *args, **kwargs))
+        gevent.joinall(threads)
+
 
 def run_tasks_on_host(connect_string, tasks, con_args=''):
     """
