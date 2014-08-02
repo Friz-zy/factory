@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*- 
 """Requirements specification for the factory"""
+from __future__ import with_statement
 
 __author__ = 'Filipp Frizzy'
 __credits__ = ["Filipp Frizzy"]
@@ -24,7 +25,7 @@ factory = imp.load_source(
 
 
 def test_should_write_command_stdout_to_sys_stdout(capsys):
-    sys.argv = ['factory.py', "run:echo \"hello world!\""]
+    sys.argv = ['factory.py', "run:echo 'hello world!'"]
     factory.main()
     out, err = capsys.readouterr()
     assert "hello world!" in out
@@ -36,6 +37,41 @@ def test_should_write_command_stderr_to_sys_stderr(capsys):
     out, err = capsys.readouterr()
     assert "/bin/sh: 1: qwertyuiop: not found" in err
     
+
+def test_should_parse_splited_argument(capsys):
+    sys.argv = ['factory.py', "run", "echo 'hello world!'"]
+    factory.main()
+    out, err = capsys.readouterr()
+    assert "hello world!" in out
+
+
+def test_should_execute_run_function(capsys):
+    sys.argv = ['factory.py', "-r", "echo 'hello world!'"]
+    factory.main()
+    out, err = capsys.readouterr()
+    assert "hello world!" in out
+
+
+def test_should_execute_sudo_function(capsys):
+    sys.argv = ['factory.py', "-s", "echo 'hello world!'"]
+    factory.main()
+    out, err = capsys.readouterr()
+    assert "hello world!" in out
+
+
+def test_should_execute_push_function(tmpdir, a, b, capsys):
+    sys.argv = ['factory.py', "--push", a, b]
+    factory.main()
+    with open(a, 'r') as a, open(b, 'r') as b:
+        assert a.read() == b.read()
+
+
+def test_should_execute_pull_function(tmpdir, a, b, capsys):
+    sys.argv = ['factory.py', "--pull", a, b]
+    factory.main()
+    with open(a, 'r') as a, open(b, 'r') as b:
+        assert a.read() == b.read()
+
 
 if __name__ == '__main__':
     pytest.main()
