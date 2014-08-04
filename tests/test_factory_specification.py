@@ -77,7 +77,7 @@ def test_should_execute_many_functions(capsys):
     sys.argv = ['factory.py', "run", "echo 'hello world!'", "run", "echo 'hello world!'"]
     factory.main()
     out, err = capsys.readouterr()
-    assert "hello world!\nhello world!\n" in out
+    assert out.count('hello world!') == 2
 
 
 def test_should_communicate_with_stdin(capsys):
