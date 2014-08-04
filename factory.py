@@ -167,6 +167,24 @@ def check_is_root():
 
 
 def main():
+    load_config()
+    args = parse_cli()
+    hosts = args.hosts.split(global_env['split_hosts'])
+    functions_to_execute = parse_functions(args.function)
+
+    if global_env['interactive']:
+        for host in hosts:
+            run_tasks_on_host(host, functions_to_execute)
+    else:
+        threads = []
+        for host in hosts:
+            args = (host, functions_to_execute)
+            kwargs = {}
+            threads.append(gevent.spawn(run_tasks_on_host, *args, **kwargs))
+        gevent.joinall(threads)
+
+
+def parse_cli():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         'function', nargs='+',
@@ -181,7 +199,10 @@ def main():
             global_env['split_user'], global_env['split_port']
         )
     )
+    return parser.parse_args()
 
+
+def load_config():
     global_env['functions'] = globals()
     
     logging.basicConfig(
@@ -196,21 +217,6 @@ def main():
     global_env['localhost'] = ['localhost',
                                '127.0.0.1',
                                gethostname(),]
-
-    args = parser.parse_args()
-    hosts = args.hosts.split(global_env['split_hosts'])
-    functions_to_execute = parse_functions(args.function)
-
-    if global_env['interactive']:
-        for host in hosts:
-            run_tasks_on_host(host, functions_to_execute)
-    else:
-        threads = []
-        for host in hosts:
-            args = (host, functions_to_execute)
-            kwargs = {}
-            threads.append(gevent.spawn(run_tasks_on_host, *args, **kwargs))
-        gevent.joinall(threads)
 
 
 def parse_functions(l_arguments):
