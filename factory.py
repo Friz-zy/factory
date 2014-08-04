@@ -57,7 +57,16 @@ global_env = {'interactive': True,
               'functions': {},
               'localhost': [],
               'split_function': ':',
-              'split_args': ',,',
+              'split_args': ',',
+              'arithmetic_symbols': ('=',
+                                     '!',
+                                     '>',
+                                     '<',
+                                     '+',
+                                     '-',
+                                     '*',
+                                     '/',
+                                     '%'),
               'split_hosts': ',',
               'split_user': '@',
               'split_port': ':',
@@ -159,54 +168,107 @@ def check_is_root():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('function',
-                    help='an function for executing like run%s\'echo "hello, world!"\'' % global_env['split_function'])
-    parser.add_argument('--host', dest='hosts',
-                    help='conectin strings like user%shost%sport' % (global_env['split_user'], global_env['split_port']))
+    parser.add_argument(
+        'function', nargs='+',
+        help='an function with arguments for executing like run%s\'echo "hello, world!"\'' % (
+            global_env['split_function']
+        )
+    )
+    parser.add_argument(
+        '--host', dest='hosts',
+        nargs='?', default='localhost',
+        help='conectin strings like user%shost%sport' % (
+            global_env['split_user'], global_env['split_port']
+        )
+    )
 
     global_env['functions'] = globals()
-    logging.basicConfig(format=u'%(asctime)s  %(name)s\t[%(levelname)-8s]\t%(message)s',
-                        datefmt='%d %b %Y %H:%M:%S',
-                        stream=sys.stdout, # will be replacing by filename
-                        filename= __file__.replace('.py', '.log'), # save log as ./factory.log
-                        filemode='a',
-                        level=logging.INFO)
+    
+    logging.basicConfig(
+        format=u'%(asctime)s  %(name)s\t[%(levelname)-8s]\t%(message)s',
+        datefmt='%d %b %Y %H:%M:%S',
+        stream=sys.stdout, # will be replacing by filename
+        filename= __file__.replace('.py', '.log'), # save log as ./factory.log
+        filemode='a',
+        level=logging.INFO
+    )
 
     global_env['localhost'] = ['localhost',
                                '127.0.0.1',
                                gethostname(),]
 
     args = parser.parse_args()
-    # by default run command at localhost
-    if not args.hosts:
-        hosts = ['localhost']
-    else:
-        hosts = args.hosts.split(global_env['split_hosts'])
-    # TODO: rewrite parsing of arguments
-    function, args = args.function.split(global_env['split_function'])
-    if len(args.split(global_env['split_function'])) > 1:
-        args, kwargs = args.split(global_env['split_function'])
-        #TODO: find right way to split args
-        fargs = args.split(global_env['split_args'])
-        kwargs = kwargs.split(global_env['split_args'])
-        fkwargs = {}
-        for i in kwargs:
-            a, b = i.split('=')
-            fkwargs[a] = b
-    else:
-        fargs, fkwargs = args.split(global_env['split_function']), {}
+    hosts = args.hosts.split(global_env['split_hosts'])
+    functions_to_execute = parse_functions(args.function)
 
     if global_env['interactive']:
         for host in hosts:
-            run_tasks_on_host(host, [(function, fargs, fkwargs)])
+            run_tasks_on_host(host, functions_to_execute)
     else:
         threads = []
         for host in hosts:
-            args = (host, [(function, fargs, fkwargs)])
+            args = (host, functions_to_execute)
             kwargs = {}
             threads.append(gevent.spawn(run_tasks_on_host, *args, **kwargs))
         gevent.joinall(threads)
 
+
+def parse_functions(l_arguments):
+    """
+    >>> parse_functions(
+            ["echo 'hello world!'",
+             'run', "echo 'hello world!'",
+             'run', "echo 'hello world!'", 'use_sudo=True',
+             "run:echo 'hello world!',use_sudo=True",
+             "run:echo 'hello world!'", 'use_sudo=True']
+        )
+    [('run', ("echo 'hello world!'"), {}),
+     ('run', ("echo 'hello world!'"), {}),
+     ('run', ("echo 'hello world!'"), {'use_sudo'='True'}),
+     ('run', ("echo 'hello world!'"), {'use_sudo'='True'}),
+     ('run', ("echo 'hello world!'"), {'use_sudo'='True'})]
+    """
+    functions = []
+    tasks = []
+
+    # an implicit execution
+    zero = l_arguments[0].split(global_env['split_function'])[0]
+    if zero not in global_env['functions'].keys():
+        logging.warning('Can not find function, executing built-in run()')
+        l_arguments.insert(0, 'run')
+
+    # step 1: split all to lists of function with args
+    for f in l_arguments:
+        if f in global_env['functions'].keys():
+            functions.append([f])
+        elif global_env['split_function'] in f:
+            function, args = f.split(global_env['split_function'])
+            if function in global_env['functions'].keys():
+                functions.append([function])
+                functions[-1].extend(args.split(global_env['split_args']))
+            else:
+                functions[-1].append(f)
+        else:
+            functions[-1].append(f)
+
+    # step 2: parse args and kwargs for each function
+    for f in functions:
+        fnct = f[0]
+        args = f[1:]
+        kwargs = {}
+        for a in args[::-1]:
+            e = a.find('=')
+            if e != (-1 or 0) and a[e-1] not in global_env['arithmetic_symbols']:
+                k, v = a.split('=')
+                k = k.strip()
+                v = v.strip()
+                kwargs[k] = v
+                args.pop()
+            else:
+                break
+        tasks.append((fnct, args, kwargs))
+
+    return tasks
 
 def run_tasks_on_host(connect_string, tasks, con_args=''):
     """
