@@ -150,8 +150,7 @@ def run(command, use_sudo=False, user='', group='', freturn=False):
     if freturn:
         return (sumout, sumerr, status)
     return sumout
-                
-            
+
 
 
 def sudo(command, user='', group='', freturn=False):
@@ -166,10 +165,27 @@ def check_is_root():
     return False
 
 
+def push(src, dst):
+    """"""
+    pass
+
+
+def pull(src, dst):
+    """"""
+    pass
+
+
 def main():
     load_config()
     args = parse_cli()
     hosts = args.hosts.split(global_env['split_hosts'])
+    # -r -s shortcuts
+    if args.sudo:
+        args.function.insert(0, 'sudo')
+    elif args.run:
+        args.function.insert(0, 'run')
+    # interactive
+    global_env['interactive'] = not args.non_interactive
     functions_to_execute = parse_functions(args.function)
 
     if global_env['interactive']:
@@ -198,6 +214,19 @@ def parse_cli():
         help='conectin strings like user%shost%sport' % (
             global_env['split_user'], global_env['split_port']
         )
+    )
+    parser.add_argument(
+        '-r', dest='run', action='store_true',
+        help='execute run() with given arguments'
+    )
+    parser.add_argument(
+        '-s', dest='sudo', action='store_true',
+        help='execute sudo() with given arguments'
+    )
+    parser.add_argument(
+        '-n, --non-interactive', dest='non_interactive',
+        action='store_true', default=False,
+        help='parallel execution without interactive cli'
     )
     return parser.parse_args()
 
@@ -298,18 +327,25 @@ class set_connect_env():
         con_args = self.ca
         connect_env.connect_string = connect_string
         if global_env['split_user'] in connect_string:
-            connect_env.user, connect_string = connect_string.split(global_env['split_user'])
+            connect_env.user, connect_string = connect_string.split(
+                global_env['split_user']
+            )
         else:
             connect_env.user = getuser()
         if global_env['split_port'] in connect_string:
-            connect_env.host, connect_env.port = connect_string.split(global_env['split_port'])
+            connect_env.host, connect_env.port = connect_string.split(
+                global_env['split_port']
+            )
         else:
             connect_env.host = connect_string
             connect_env.port = global_env['ssh_port']
         connect_env.con_args = con_args
-        connect_env.logger = logging.getLogger(''.join((connect_env.user,
-                                                        global_env['split_user'],
-                                                        connect_env.host)))
+        connect_env.logger = logging.getLogger(
+            ''.join((connect_env.user,
+                global_env['split_user'],
+                connect_env.host
+            ))
+        )
         return connect_env
 
     def __exit__(self, type, value, traceback):
