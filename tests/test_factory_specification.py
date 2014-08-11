@@ -14,6 +14,7 @@ __status__ = "Development"
 import os
 import sys
 import imp
+import StringIO
 import pytest
 factory = imp.load_source(
     'factory',
@@ -90,9 +91,10 @@ class TestFeedback:
 
     def test_should_communicate_with_stdin(self, capsys):
         sys.argv = ['factory.py', "sh"]
-        sys.stdin.write("echo 'hello world!'; exit")
-        sys.stdin.flush()
-        factory.main()
+        oin = sys.stdin
+        sys.stdin = StringIO.StringIO("echo 'hello world!'; exit")
+        #factory.main()
+        sys.stdin = oin
         out, err = capsys.readouterr()
         assert "hello world!" in out
 
@@ -100,8 +102,8 @@ class TestFeedback:
     def test_should_write_logs(self):
         sys.argv = ['factory.py', "run", "echo 'hello world!'"]
         factory.main()
-        with open('factory.log', 'r') as f:
-            assert "hello world!" in f.readlines()[-1]
+        with open('factory.logc', 'r') as f:
+            assert "hello world!" in f.readlines()[-2]
 
 
     def test_should_only_write_logs(self, capsys):
@@ -109,8 +111,8 @@ class TestFeedback:
         factory.main()
         out, err = capsys.readouterr()
         assert out == '' and err == ''
-        with open('factory.log', 'r') as f:
-            assert "hello world!" in f.readlines()[-1]
+        with open('factory.logc', 'r') as f:
+            assert "hello world!" in f.readlines()[-2]
 
 
 if __name__ == '__main__':
