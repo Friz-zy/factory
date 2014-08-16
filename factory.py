@@ -50,6 +50,8 @@ if (major,minor) < (2,5):
     sys.exit(2)
 
 import gevent
+import gevent.queue
+from gevent.socket import wait_read
 from gevent.subprocess import Popen, PIPE
 
 # default variables
@@ -72,7 +74,8 @@ global_env = {'interactive': True,
               'split_port': ':',
               'default_shell': 'sh',
               'ssh_binary': 'ssh',
-              'ssh_port': 22,}
+              'ssh_port': 22,
+              'stdin_queue'}
 
 class Empty():
     def __init__(self):
@@ -247,6 +250,8 @@ def load_config():
                                '127.0.0.1',
                                gethostname(),]
 
+    global_env['stdin_queue'] = gevent.queue.Queue()
+
 
 def parse_functions(l_arguments):
     """
@@ -315,6 +320,13 @@ def run_tasks_on_host(connect_string, tasks, con_args=''):
             gevent.sleep(0)
         threads = [gevent.spawn(global_env['functions'][function], *args, **kwargs) for function, args, kwargs in tasks]
         gevent.joinall(threads)
+
+
+def stdin_loop():
+    while True:
+        wait_read(sys.stdin.fileno())
+        l = sys.stdin.readline()
+        global_env['stdin_queue'].put_nowait(l)
 
 
 class set_connect_env():
