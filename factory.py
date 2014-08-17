@@ -56,6 +56,7 @@ from gevent.subprocess import Popen, PIPE
 
 # default variables
 global_env = {'interactive': True,
+              'parallel': False,
               'functions': {},
               'localhost': [],
               'split_function': ':',
@@ -75,7 +76,7 @@ global_env = {'interactive': True,
               'default_shell': 'sh',
               'ssh_binary': 'ssh',
               'ssh_port': 22,
-              'stdin_queue'}
+              'stdin_queue': None,}
 
 class Empty():
     def __init__(self):
@@ -124,28 +125,24 @@ def run(command, use_sudo=False, user='', group='', freturn=False):
     if not interactive:
         gevent.sleep(0)
     # processing std loop
-    sout = ' '
-    sumout = ''
-    sumerr = ''
-    while sout or p.poll() is None:
-        serr = p.stderr.readline()
-        if serr:
-            sumerr += serr
-            logger.info('err: %s', serr)
-            if interactive:
-                sys.stderr.write('%s err: %s' % (host_string, serr))
-                sys.stderr.flush()
-        sout = p.stdout.readline()
-        if sout:
-            sumout += sout
-            logger.info('out: %s', sout)
-            #TODO: y\n; password
-            if interactive:
-                sys.stdout.write('%s out: %s' % (host_string, sout))
-                sys.stderr.flush()
-        if not interactive:
-            gevent.sleep(0)
+    threads = []
+    if interactive:
+        args = (p, logger, host_string)
+        gin = gevent.spawn(in_loop, *args)
+        threads.append(gin)
+
+    args = (p, logger, interactive, host_string)
+    gout = gevent.spawn(out_loop, *args)
+    threads.append(gout)
+
+    args = (p, logger, interactive, host_string)
+    gerr = gevent.spawn(err_loop, *args)
+    threads.append(gerr)
+
+    gevent.joinall(threads)
     #TODO: check returncode if returncode==None
+    sumout = gout.value
+    sumerr = gerr.value
     status = p.returncode
     if p.poll() is None:
         p.terminate()
@@ -155,6 +152,53 @@ def run(command, use_sudo=False, user='', group='', freturn=False):
     return sumout
 
 
+def out_loop(p, logger, interactive, host_string):
+    sout = ' '
+    sumout = ''
+    while sout or p.poll() is None:
+        sout = p.stdout.readline()
+        if sout:
+            sumout += sout
+            logger.info('out: %s', sout)
+            #TODO: y\n; password
+            if interactive:
+                sys.stdout.write('%s out: %s' % (host_string, sout))
+                sys.stderr.flush()
+    return sumout
+
+
+def err_loop(p, logger, interactive, host_string):
+    serr = ' '
+    sumerr = ''
+    while serr or p.poll() is None:
+        serr = p.stderr.readline()
+        if serr:
+            sumerr += serr
+            logger.info('err: %s', serr)
+            if interactive:
+                sys.stderr.write('%s err: %s' % (host_string, serr))
+                sys.stderr.flush()
+    return sumerr
+
+
+def in_loop(p, logger, host_string):
+    lin = 0
+    while p.poll() is None:
+        global_env['stdin_queue'].qsize()
+        if global_env['stdin_queue'].qsize() > lin:
+            queue = global_env['stdin_queue'].copy()
+            qs = queue.qsize()
+            i = 0
+            for l in queue:
+                if i >= lin:
+                    # TODO: crossystem end of line \n \r \nr
+                    p.stdin.write(l)
+                    p.stdin.flush()
+                i += 1
+                if queue.qsize() == 0:
+                    break
+            lin = qs
+        gevent.sleep(0)
 
 def sudo(command, user='', group='', freturn=False):
     """sudo is alias for run(use_sudo=True)"""
@@ -191,7 +235,11 @@ def main():
     global_env['interactive'] = not args.non_interactive
     functions_to_execute = parse_functions(args.function)
 
+    # start of stdin loop
     if global_env['interactive']:
+        sloop = gevent.spawn(stdin_loop)
+
+    if global_env['interactive'] and not global_env['parallel']:
         for host in hosts:
             run_tasks_on_host(host, functions_to_execute)
     else:
@@ -201,6 +249,10 @@ def main():
             kwargs = {}
             threads.append(gevent.spawn(run_tasks_on_host, *args, **kwargs))
         gevent.joinall(threads)
+
+    # finish stdin loop
+    if global_env['interactive']:
+        sloop.kill()
 
 
 def parse_cli():
@@ -237,6 +289,7 @@ def parse_cli():
 def load_config():
     global_env['functions'] = globals()
     
+    # TODO: unicode for logging
     logging.basicConfig(
         format=u'%(asctime)s  %(name)s\t[%(levelname)-8s]\t%(message)s',
         datefmt='%d %b %Y %H:%M:%S',
