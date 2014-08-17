@@ -91,10 +91,10 @@ class TestFeedback:
 
     def test_should_communicate_with_stdin(self, capsys):
         sys.argv = ['factory.py', "sh"]
-        oin = sys.stdin
-        sys.stdin = StringIO.StringIO("echo 'hello world!'; exit")
+        #oin = sys.stdin
+        #sys.stdin = StringIO.StringIO("echo 'hello world!'; exit")
         #factory.main()
-        sys.stdin = oin
+        #sys.stdin = oin
         out, err = capsys.readouterr()
         assert "hello world!" in out
 
@@ -113,6 +113,14 @@ class TestFeedback:
         assert out == '' and err == ''
         with open('factory.logc', 'r') as f:
             assert "hello world!" in f.readlines()[-2]
+
+
+    def test_should_work_with_unicode(self, capsys):
+        sys.argv = ['factory.py', "run:echo 'привет, мир!'"]
+        factory.main()
+        out, err = capsys.readouterr()
+        assert "привет, мир!" in out
+        assert err == ''
 
 
 if __name__ == '__main__':
