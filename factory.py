@@ -188,13 +188,11 @@ def in_loop(p, logger, host_string):
         if global_env['stdin_queue'].qsize() > lin:
             queue = global_env['stdin_queue'].copy()
             qs = queue.qsize()
-            i = 0
-            for l in queue:
+            for i, l in enumerate(queue):
                 if i >= lin:
                     # TODO: crossystem end of line \n \r \nr
                     p.stdin.write(l)
                     p.stdin.flush()
-                i += 1
                 if queue.qsize() == 0:
                     break
             lin = qs
