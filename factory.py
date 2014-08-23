@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # coding=utf-8
-"""Factory provides api for local and nonlocal running of functions,scripts, etc via shh and *sh."""
+"""Tasks executing via ssh and sh.
+
+Factory provides api for local and nonlocal running of functions,scripts, etc via ssh and sh.
+
+"""
 from __future__ import with_statement
 """
 Copyright (c) by Filipp Kucheryavy aka Frizzy <filipp.s.frizzy@gmail.com>
@@ -86,7 +90,22 @@ connect_env = Empty()
 
 
 def run(command, use_sudo=False, user='', group='', freturn=False):
-    """
+    """Execute command on host via ssh or subprocess.
+
+    Args:
+      command (str): command for executing
+      use_sudo (bool): running with sudo prefix if True and current user not root
+      user (str): username for sudo -u prefix
+      group (str): group for sudo -g prefix
+      freturn (bool): return tuple if True, else return str
+
+    Return:
+      str if freturn is False: string that contained all stdout messages
+      tuple if freturn is True:
+        string that contained all stdout messages
+        string that contained all stderr
+        int that mean return code of command
+
     """
     logger = connect_env.logger
     interactive = global_env['interactive']
@@ -153,6 +172,20 @@ def run(command, use_sudo=False, user='', group='', freturn=False):
 
 
 def out_loop(p, logger, interactive, host_string):
+    """Loop for command stdout.
+
+    Check executing command stdout and put messages to log and sys.stdout.
+
+    Args:
+      p (Popen object): executing command
+      logger (logging.logger object): command logger instance
+      interactive (bool): True if interactive mode, else False
+      host_string (str): string for processing sys.stdout
+
+    Return:
+      str: string that contained all stdout messages
+
+    """
     sout = ' '
     sumout = ''
     while sout or p.poll() is None:
@@ -163,11 +196,25 @@ def out_loop(p, logger, interactive, host_string):
             #TODO: y\n; password
             if interactive:
                 sys.stdout.write('%s out: %s' % (host_string, sout))
-                sys.stderr.flush()
+                sys.stdout.flush()
     return sumout
 
 
 def err_loop(p, logger, interactive, host_string):
+    """Loop for command stderr.
+
+    Check executing command stderr and put messages to log and sys.stderr.
+
+    Args:
+      p (Popen object): executing command
+      logger (logging.logger object): command logger instance
+      interactive (bool): True if interactive mode, else False
+      host_string (str): string for processing sys.stderr
+
+    Return:
+      str: string that contained all stderr messages
+
+    """
     serr = ' '
     sumerr = ''
     while serr or p.poll() is None:
@@ -182,9 +229,18 @@ def err_loop(p, logger, interactive, host_string):
 
 
 def in_loop(p, logger, host_string):
+    """Loop for command stdin.
+
+    Check global stdin queue and put lines from it to command stdin.
+
+    Args:
+      p (Popen object): executing command
+      logger (logging.logger object): command logger instance (currently not used)
+      host_string (str): string for processing sys.stdout (currently not used)
+
+    """
     lin = 0
     while p.poll() is None:
-        global_env['stdin_queue'].qsize()
         if global_env['stdin_queue'].qsize() > lin:
             queue = global_env['stdin_queue'].copy()
             qs = queue.qsize()
@@ -199,11 +255,32 @@ def in_loop(p, logger, host_string):
         gevent.sleep(0)
 
 def sudo(command, user='', group='', freturn=False):
-    """sudo is alias for run(use_sudo=True)"""
+    """sudo is alias for run(use_sudo=True)
+
+    Args:
+      command (str): command for executing
+      user (str): username for sudo -u prefix
+      group (str): group for sudo -g prefix
+      freturn (bool): return tuple if True, else return str
+
+    Return:
+      str if freturn is False: string that contained all stdout messages
+      tuple if freturn is True:
+        string that contained all stdout messages
+        string that contained all stderr
+        int that mean return code of command
+
+    """
     return run(command, use_sudo=True, user=user, group=group, freturn=freturn)
 
 
 def check_is_root():
+    """Check uid via running id -u command.
+
+    Return:
+      bool: True if current user uid is 0, else False
+
+    """
     out, err, status = run('id -u', freturn=True)
     if not status:
         return not int(out)
@@ -305,19 +382,29 @@ def load_config():
 
 
 def parse_functions(l_arguments):
-    """
-    >>> parse_functions(
-            ["echo 'hello world!'",
-             'run', "echo 'hello world!'",
-             'run', "echo 'hello world!'", 'use_sudo=True',
-             "run:echo 'hello world!',use_sudo=True",
-             "run:echo 'hello world!'", 'use_sudo=True']
-        )
-    [('run', ("echo 'hello world!'"), {}),
-     ('run', ("echo 'hello world!'"), {}),
-     ('run', ("echo 'hello world!'"), {'use_sudo'='True'}),
-     ('run', ("echo 'hello world!'"), {'use_sudo'='True'}),
-     ('run', ("echo 'hello world!'"), {'use_sudo'='True'})]
+    """Convert input list to list of functions with args and kwargs.
+
+    Args:
+      l_arguments (list): list of tasks for executing
+
+    Return:
+      list: list of tuples of functions with args and kwargs
+
+    Examples:
+      >>> load_config()
+      >>> parse_functions(
+      ...      ["echo 'hello world!'",
+      ...      'run', "echo 'hello world!'",
+      ...      'run', "echo 'hello world!'", 'use_sudo=True',
+      ...      "run:echo 'hello world!',use_sudo=True",
+      ...      "run:echo 'hello world!'", 'use_sudo=True']
+      ... ) # doctest: +NORMALIZE_WHITESPACE
+      [('run', ["echo 'hello world!'"], {}),
+      ('run', ["echo 'hello world!'"], {}),
+      ('run', ["echo 'hello world!'"], {'use_sudo': 'True'}),
+      ('run', ["echo 'hello world!'"], {'use_sudo': 'True'}),
+      ('run', ["echo 'hello world!'"], {'use_sudo': 'True'})]
+
     """
     functions = []
     tasks = []
@@ -374,6 +461,7 @@ def run_tasks_on_host(connect_string, tasks, con_args=''):
 
 
 def stdin_loop():
+    """Global loop: wait for sys.stdin and put line from it to global queue."""
     while True:
         wait_read(sys.stdin.fileno())
         l = sys.stdin.readline()
