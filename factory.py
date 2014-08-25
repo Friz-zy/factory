@@ -192,7 +192,7 @@ def out_loop(p, logger, interactive, host_string):
         sout = p.stdout.readline()
         if sout:
             sumout += sout
-            logger.info('out: %s', sout)
+            logger.info('out: %s', unicode(sout, "UTF-8"))
             #TODO: y\n; password
             if interactive:
                 sys.stdout.write('%s out: %s' % (host_string, sout))
@@ -221,7 +221,7 @@ def err_loop(p, logger, interactive, host_string):
         serr = p.stderr.readline()
         if serr:
             sumerr += serr
-            logger.info('err: %s', serr)
+            logger.info('err: %s', unicode(serr, "UTF-8"))
             if interactive:
                 sys.stderr.write('%s err: %s' % (host_string, serr))
                 sys.stderr.flush()
@@ -371,7 +371,7 @@ def load_config():
         stream=sys.stdout, # will be replacing by filename
         filename= __file__.replace('.py', '.log'), # save log as ./factory.log
         filemode='a',
-        level=logging.INFO
+        level=logging.INFO,
     )
 
     global_env['localhost'] = ['localhost',
