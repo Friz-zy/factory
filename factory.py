@@ -3,6 +3,40 @@
 """Tasks executing via ssh and sh.
 
 Factory provides api for local and nonlocal running of functions,scripts, etc via ssh and sh.
+It is proof-of-concept realization of [fabric](https://github.com/fabric/fabric) with a number of differences:
+* run() function works in the same way with subprocess.popen under localhost as under ssh connect to remote host
+* Factory uses openssh or any another ssh client (you should modified config for this), so you can use all power of ssh sockets
+* Factory uses [gevent](https://github.com/surfly/gevent) library for asynchronous executing
+
+Example:
+  $ ./factory.py 'echo "hello, world!"'
+  $ ./factory.py --host user@host:port run:'uname -a'
+
+Attributes:
+  global_env (dict): dict with global options
+    interactive (bool): False if --non-interactive given, else True
+    parallel (bool): True if --parallel given, else False
+    functions (dict): dict with all functions, default is globals()
+    localhost (tuple): tuple with all names and ip of localhost, default is ['localhost', '127.0.0.1', socket.gethostname()]
+    split_function (str): splitter between function and args, default is ':'
+    split_args (str): splitter between args, default is ','
+    arithmetic_symbols (list): list of arithmetic symbols, default is ('=', '!', '>', '<', '+', '-', '*', '/', '%')
+    split_hosts (str): splitter between hosts connection strings, default is ','
+    split_user (str): splitter between user and host, default is '@'
+    split_port (str): splitter between host and port, default is ':'
+    default_shell (str): default 'sh'
+    ssh_binary (str): path to ssh binary, default is 'ssh'
+    ssh_port (int): ssh port for connections, default is '22'
+    stdin_queue (gevent queue object): global queue for sys.stdin messages in interactive mode
+
+  connect_env (Empty class object): global class instance for connect environment
+    connect_string (str): [user@]host[:port]
+    user (str): username for connect, default is getpass.getuser()
+    host (str): hostname or ip for connect
+    port (str): port for connect
+    con_args (str): options for ssh
+    logger (logging.logger object): logger object for this connect
+    check_is_root (bool): True if connected as root, else False
 
 """
 from __future__ import with_statement
@@ -473,7 +507,7 @@ class set_connect_env():
 
     Connect_env attibutes:
       connect_string (str): [user@]host[:port]
-      user (str): username for connect
+      user (str): username for connect, default is getpass.getuser()
       host (str): hostname or ip for connect
       port (str): port for connect
       con_args (str): options for ssh
