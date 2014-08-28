@@ -365,6 +365,14 @@ def main():
 
 
 def parse_cli():
+    """Use argparse for command line.
+
+    Convert the strings to objects and assign them as attributes of the namespace.
+
+    Return:
+      namespace: like Namespace(foo='FOO', x=None)
+
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         'function', nargs='+',
@@ -396,6 +404,7 @@ def parse_cli():
 
 
 def load_config():
+    """Set global variables."""
     global_env['functions'] = globals()
     
     # TODO: unicode for logging
@@ -483,7 +492,16 @@ def parse_functions(l_arguments):
     return tasks
 
 def run_tasks_on_host(connect_string, tasks, con_args=''):
-    """
+    """Open connect to host and executed tasks.
+
+    Use set_connect_env context manager for set connect args.
+    Then set check_is_root variable.
+    And then executed tasks for this host.
+
+    Args:
+      connect_string (str): [user@]host[:port]
+      con_args (str): options for ssh
+
     """
     with set_connect_env(connect_string, con_args) as connect_env:
         #TODO: checking first connection via ssh
