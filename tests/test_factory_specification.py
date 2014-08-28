@@ -73,6 +73,12 @@ class TestArgParsing:
         with open('factory.log', 'r') as f:
             assert "hello world!" in f.readlines()[-1]
 
+    def test_should_parallel_executing(self, capsys):
+        sys.argv = ['factory.py', '-p', "run", "sleep 1; echo 'world!'", "run", "echo 'hello'"]
+        factory.main()
+        out, err = capsys.readouterr()
+        assert out.find('hello') < out.find('world!')
+
 
 class TestFeedback:
     def test_should_write_command_stdout_to_sys_stdout(self, capsys):
@@ -119,6 +125,7 @@ class TestFeedback:
         sys.argv = ['factory.py', "run:echo 'привет, мир!'"]
         factory.main()
         out, err = capsys.readouterr()
+        print out, err
         assert "привет, мир!" in out
         assert err == ''
 

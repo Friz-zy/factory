@@ -143,6 +143,7 @@ def run(command, use_sudo=False, user='', group='', freturn=False):
     """
     logger = connect_env.logger
     interactive = global_env['interactive']
+    parallel = global_env['parallel']
     host_string = ''.join((connect_env.user,
                            '@',
                            connect_env.host))
@@ -175,7 +176,7 @@ def run(command, use_sudo=False, user='', group='', freturn=False):
                             command]
         p = Popen(scommand, stdout=PIPE, stderr=PIPE, stdin=PIPE)
     # run another command
-    if not interactive:
+    if parallel:
         gevent.sleep(0)
     # processing std loop
     threads = []
@@ -340,15 +341,18 @@ def main():
         args.function.insert(0, 'sudo')
     elif args.run:
         args.function.insert(0, 'run')
-    # interactive
+
+    # update globals interactive and parallel from cli
     global_env['interactive'] = not args.non_interactive
+    global_env['parallel'] = args.parallel
+
     functions_to_execute = parse_functions(args.function)
 
     # start of stdin loop
     if global_env['interactive']:
         sloop = gevent.spawn(stdin_loop)
 
-    if global_env['interactive'] and not global_env['parallel']:
+    if not global_env['parallel']:
         for host in hosts:
             run_tasks_on_host(host, functions_to_execute)
     else:
@@ -398,7 +402,12 @@ def parse_cli():
     parser.add_argument(
         '-n, --non-interactive', dest='non_interactive',
         action='store_true', default=False,
-        help='parallel execution without interactive cli'
+        help='execution without interactive cli'
+    )
+    parser.add_argument(
+        '-p, --parallel', dest='parallel',
+        action='store_true', default=False,
+        help='parallel execution with or without interactive cli'
     )
     return parser.parse_args()
 
@@ -500,16 +509,21 @@ def run_tasks_on_host(connect_string, tasks, con_args=''):
 
     Args:
       connect_string (str): [user@]host[:port]
+      tasks (list): list of tuples of functions with args and kwargs
       con_args (str): options for ssh
 
     """
     with set_connect_env(connect_string, con_args) as connect_env:
         #TODO: checking first connection via ssh
         connect_env.check_is_root = check_is_root()
-        if not global_env['interactive']:
+        if global_env['parallel']:
             gevent.sleep(0)
-        threads = [gevent.spawn(global_env['functions'][function], *args, **kwargs) for function, args, kwargs in tasks]
-        gevent.joinall(threads)
+            threads = [gevent.spawn(global_env['functions'][function], *args, **kwargs) for function, args, kwargs in tasks]
+            gevent.joinall(threads)
+        else:
+            for function, args, kwargs in tasks:
+                global_env['functions'][function](*args, **kwargs)
+
 
 
 def stdin_loop():
