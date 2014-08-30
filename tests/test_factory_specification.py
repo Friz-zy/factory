@@ -44,7 +44,6 @@ class TestAPI:
         with open(a, 'r') as a, open(b, 'r') as b:
             assert a.read() == b.read()
 
-
     def test_should_execute_pull_function(self, tmpdir, a, b, capsys):
         sys.argv = ['factory.py', "pull", a, b]
         factory.main()
@@ -87,13 +86,11 @@ class TestFeedback:
         out, err = capsys.readouterr()
         assert "hello world!" in out
 
-
     def test_should_write_command_stderr_to_sys_stderr(self, capsys):
         sys.argv = ['factory.py', 'run:qwertyuiop']
         factory.main()
         out, err = capsys.readouterr()
         assert "/bin/sh: 1: qwertyuiop: not found" in err
-
 
     def test_should_communicate_with_stdin(self, capsys):
         sys.argv = ['factory.py', "sh"]
@@ -104,13 +101,11 @@ class TestFeedback:
         out, err = capsys.readouterr()
         assert "hello world!" in out
 
-
     def test_should_write_logs(self):
         sys.argv = ['factory.py', "run", "echo 'hello world!'"]
         factory.main()
         with open('factory.logc', 'r') as f:
             assert "hello world!" in f.readlines()[-2]
-
 
     def test_should_only_write_logs(self, capsys):
         sys.argv = ['factory.py', "-n", "run", "echo 'hello world!'"]
@@ -119,7 +114,6 @@ class TestFeedback:
         assert out == '' and err == ''
         with open('factory.logc', 'r') as f:
             assert "hello world!" in f.readlines()[-2]
-
 
     def test_should_work_with_unicode(self, capsys):
         sys.argv = ['factory.py', "run:echo 'привет, мир!'"]
