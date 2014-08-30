@@ -27,6 +27,9 @@ Attributes:
     default_shell (str): default 'sh'
     ssh_binary (str): path to ssh binary, default is 'ssh'
     ssh_port (int): ssh port for connections, default is '22'
+    ssh_port_option (str): ssh port option, default is '-p'
+    scp_binary (str): path to scp binary, default is 'scp'
+    scp_port_option (str): scp port option, default is '-P'
     stdin_queue (gevent queue object): global queue for sys.stdin messages in interactive mode
 
   connect_env (Empty class object): global class instance for connect environment
@@ -114,6 +117,9 @@ global_env = {'interactive': True,
               'default_shell': 'sh',
               'ssh_binary': 'ssh',
               'ssh_port': 22,
+              'ssh_port_option': '-p',
+              'scp_binary': 'scp',
+              'scp_port_option': '-P',
               'stdin_queue': None,}
 
 class Empty():
@@ -168,12 +174,14 @@ def run(command, use_sudo=False, user='', group='', freturn=False):
     if connect_env.host in global_env['localhost']:
         p = Popen(command, stdout=PIPE, stderr=PIPE, stdin=PIPE, shell=True)
     else:
-        scommand = [global_env['ssh_binary'],
-                            '-p',
-                            str(connect_env.port),
-                            host_string,
-                            connect_env.con_args,
-                            command]
+        scommand = [
+            global_env['ssh_binary'],
+            global_env['ssh_port_option'],
+            str(connect_env.port),
+            host_string,
+            connect_env.con_args,
+            command
+        ]
         p = Popen(scommand, stdout=PIPE, stderr=PIPE, stdin=PIPE)
     # run another command
     if parallel:
