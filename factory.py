@@ -80,6 +80,7 @@ __status__ = "Development"
 
 import os
 import sys
+from shutil import copy, copytree
 from socket import gethostname
 from getpass import getuser
 import logging
@@ -330,14 +331,79 @@ def check_is_root():
     return False
 
 
-def push(src, dst):
+def push(src, dst='~/', pull=False):
     """"""
-    pass
+    logger = connect_env.logger
+    interactive = global_env['interactive']
+    parallel = global_env['parallel']
+    host_string = ''.join((connect_env.user,
+                           '@',
+                           connect_env.host))
+
+    if connect_env.host in global_env['localhost']:
+        if os.path.exists(src):
+            if os.path.isfile(src):
+                try:
+                    copy(src, dst)
+                except:
+                    return 1
+            else:
+                try:
+                    copytree(src, dst)
+                except:
+                    return 1
+        return 1
+    else:
+        if pull:
+            command = '-r' + host_string + ':' + src + ' ' + dst
+        else:
+            command = '-r' + src + ' ' + host_string + ':' + dst
+        scommand = [
+            global_env['scp_binary'],
+            global_env['scp_port_option'],
+            str(connect_env.port),
+            connect_env.con_args,
+            command
+        ]
+        p = Popen(scommand, stdout=PIPE, stderr=PIPE, stdin=PIPE)
+    # run another command
+    if parallel:
+        gevent.sleep(0)
+    # processing std loop
+    threads = []
+    if interactive:
+        args = (p, logger, host_string)
+        gin = gevent.spawn(in_loop, *args)
+        threads.append(gin)
+
+    args = (p, logger, interactive, host_string)
+    gout = gevent.spawn(out_loop, *args)
+    threads.append(gout)
+
+    args = (p, logger, interactive, host_string)
+    gerr = gevent.spawn(err_loop, *args)
+    threads.append(gerr)
+
+    gevent.joinall(threads)
+    #TODO: check returncode if returncode==None
+    status = p.returncode
+    if p.poll() is None:
+        p.terminate()
+        p.kill()
+    return status
 
 
-def pull(src, dst):
+def pull(src, dst='.'):
     """"""
-    pass
+    return push(src, dst, True)
+
+
+def get(src, dst='.'):
+    return pull(src, dst)
+
+
+def put(src, dst='~/'):
+    return push(src, dst)
 
 
 def main():
