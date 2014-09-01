@@ -406,6 +406,69 @@ def put(src, dst='~/'):
     return push(src, dst)
 
 
+def run_script(binary=None, local_file, freturn=False):
+    """"""
+    logger = connect_env.logger
+    interactive = global_env['interactive']
+    parallel = global_env['parallel']
+    host_string = ''.join((connect_env.user,
+                           '@',
+                           connect_env.host))
+    
+    if not binary:
+        with open(local_file) as f:
+            l = f.readline()
+        if l.startwith('#'):
+            binary = l.strip()[2:]
+        else:
+            binary = 'sh -c'
+
+    command = binary + " < " + local_file
+
+   # open new connect
+    if connect_env.host in global_env['localhost']:
+        p = Popen(command, stdout=PIPE, stderr=PIPE, stdin=PIPE, shell=True)
+    else:
+        scommand = ''.join((
+            global_env['ssh_binary'],
+            global_env['ssh_port_option'],
+            str(connect_env.port),
+            host_string,
+            connect_env.con_args,
+            command
+        ))
+        p = Popen(scommand, stdout=PIPE, stderr=PIPE, stdin=PIPE, shell=True)
+    # run another command
+    if parallel:
+        gevent.sleep(0)
+    # processing std loop
+    threads = []
+    if interactive:
+        args = (p, logger, host_string)
+        gin = gevent.spawn(in_loop, *args)
+        threads.append(gin)
+
+    args = (p, logger, interactive, host_string)
+    gout = gevent.spawn(out_loop, *args)
+    threads.append(gout)
+
+    args = (p, logger, interactive, host_string)
+    gerr = gevent.spawn(err_loop, *args)
+    threads.append(gerr)
+
+    gevent.joinall(threads)
+    #TODO: check returncode if returncode==None
+    sumout = gout.value
+    sumerr = gerr.value
+    status = p.returncode
+    if p.poll() is None:
+        p.terminate()
+        p.kill()
+    if freturn:
+        return (sumout, sumerr, status)
+    return sumout
+
+
 def main():
     load_config()
     args = parse_cli()
