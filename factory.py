@@ -345,11 +345,13 @@ def push(src, dst='~/', pull=False):
             if os.path.isfile(src):
                 try:
                     copy(src, dst)
+                    return 0
                 except:
                     return 1
             else:
                 try:
                     copytree(src, dst)
+                    return 0
                 except:
                     return 1
         return 1
@@ -366,11 +368,11 @@ def push(src, dst='~/', pull=False):
             command
         ]
 
-   # open new connect
-    with set_connect_env('localhost', connect_env.con_args):
-        sumout, sumerr, status = run(command, freturn=True)
+        # open new connect
+        with set_connect_env('localhost', connect_env.con_args):
+            sumout, sumerr, status = run(command, freturn=True)
 
-    return status
+        return status
 
 def pull(src, dst='.'):
     """"""
