@@ -358,40 +358,19 @@ def push(src, dst='~/', pull=False):
             command = '-r' + host_string + ':' + src + ' ' + dst
         else:
             command = '-r' + src + ' ' + host_string + ':' + dst
-        scommand = [
+        command = [
             global_env['scp_binary'],
             global_env['scp_port_option'],
             str(connect_env.port),
             connect_env.con_args,
             command
         ]
-        p = Popen(scommand, stdout=PIPE, stderr=PIPE, stdin=PIPE)
-    # run another command
-    if parallel:
-        gevent.sleep(0)
-    # processing std loop
-    threads = []
-    if interactive:
-        args = (p, logger, host_string)
-        gin = gevent.spawn(in_loop, *args)
-        threads.append(gin)
 
-    args = (p, logger, interactive, host_string)
-    gout = gevent.spawn(out_loop, *args)
-    threads.append(gout)
+   # open new connect
+    with set_connect_env('localhost', connect_env.con_args):
+        sumout, sumerr, status = run(command, freturn=True)
 
-    args = (p, logger, interactive, host_string)
-    gerr = gevent.spawn(err_loop, *args)
-    threads.append(gerr)
-
-    gevent.joinall(threads)
-    #TODO: check returncode if returncode==None
-    status = p.returncode
-    if p.poll() is None:
-        p.terminate()
-        p.kill()
     return status
-
 
 def pull(src, dst='.'):
     """"""
@@ -425,11 +404,8 @@ def run_script(local_file, binary=None, freturn=False):
 
     command = binary + " < " + local_file
 
-   # open new connect
-    if connect_env.host in global_env['localhost']:
-        p = Popen(command, stdout=PIPE, stderr=PIPE, stdin=PIPE, shell=True)
-    else:
-        scommand = ''.join((
+    if not connect_env.host in global_env['localhost']:
+        command = ''.join((
             global_env['ssh_binary'],
             global_env['ssh_port_option'],
             str(connect_env.port),
@@ -437,36 +413,10 @@ def run_script(local_file, binary=None, freturn=False):
             connect_env.con_args,
             command
         ))
-        p = Popen(scommand, stdout=PIPE, stderr=PIPE, stdin=PIPE, shell=True)
-    # run another command
-    if parallel:
-        gevent.sleep(0)
-    # processing std loop
-    threads = []
-    if interactive:
-        args = (p, logger, host_string)
-        gin = gevent.spawn(in_loop, *args)
-        threads.append(gin)
 
-    args = (p, logger, interactive, host_string)
-    gout = gevent.spawn(out_loop, *args)
-    threads.append(gout)
-
-    args = (p, logger, interactive, host_string)
-    gerr = gevent.spawn(err_loop, *args)
-    threads.append(gerr)
-
-    gevent.joinall(threads)
-    #TODO: check returncode if returncode==None
-    sumout = gout.value
-    sumerr = gerr.value
-    status = p.returncode
-    if p.poll() is None:
-        p.terminate()
-        p.kill()
-    if freturn:
-        return (sumout, sumerr, status)
-    return sumout
+   # open new connect
+    with set_connect_env('localhost', connect_env.con_args):
+        return run(command, freturn)
 
 
 def main():
