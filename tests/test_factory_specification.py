@@ -50,6 +50,14 @@ class TestAPI:
         with open(a, 'r') as a, open(b, 'r') as b:
             assert a.read() == b.read()
 
+    def test_should_execute_run_script_function(self, tmpdir, a, capsys):
+        sys.argv = ['factory.py', "run_script", a]
+        with open(a, 'w') as a:
+            a.write('echo "hello world!"')
+        factory.main()
+        out, err = capsys.readouterr()
+        print out, err
+        assert "hello world!" in out
 
 class TestArgParsing:
     def test_should_parse_splited_arguments(self, capsys):
