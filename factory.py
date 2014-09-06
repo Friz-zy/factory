@@ -406,7 +406,7 @@ def put(src, dst='~/'):
     return push(src, dst)
 
 
-def run_script(binary=None, local_file, freturn=False):
+def run_script(local_file, binary=None, freturn=False):
     """"""
     logger = connect_env.logger
     interactive = global_env['interactive']
@@ -418,10 +418,10 @@ def run_script(binary=None, local_file, freturn=False):
     if not binary:
         with open(local_file) as f:
             l = f.readline()
-        if l.startwith('#'):
+        if l.startswith('#'):
             binary = l.strip()[2:]
         else:
-            binary = 'sh -c'
+            binary = 'sh -s'
 
     command = binary + " < " + local_file
 
