@@ -299,7 +299,7 @@ def in_loop(p, logger, host_string):
         gevent.sleep(0)
 
 def sudo(command, user='', group='', freturn=False):
-    """sudo is alias for run(use_sudo=True)
+    """sudo is alias for run(use_sudo=True).
 
     Args:
       command (str): command for executing
@@ -332,7 +332,23 @@ def check_is_root():
 
 
 def push(src, dst='~/', pull=False):
-    """"""
+    """Copying file or directory.
+
+    Copy local file or directory to another host or another localhost place.
+    Uses shutil.copy and shutil.copytree on localhost and scp (by default)
+    with -r option.
+
+    Args:
+      src (str): local file or directory
+      dst (str): destination path, default is '~/'
+      pull (bool): copy file from another host to localhost if True, default is False
+
+    Return:
+      int that mean return code of command:
+        exception? 0 : 1 on localhost
+        status of subprocess with scp
+
+    """
     logger = connect_env.logger
     interactive = global_env['interactive']
     parallel = global_env['parallel']
@@ -375,27 +391,56 @@ def push(src, dst='~/', pull=False):
         return status
 
 def pull(src, dst='.'):
-    """"""
+    """Alias for push(pull=False).
+
+    Args:
+      src (str): local file or directory
+      dst (str): destination path, default is '.'
+
+    Return:
+      int that mean return code of command:
+        exception? 0 : 1 on localhost
+        status of subprocess with scp
+
+    """
     return push(src, dst, True)
 
 
 def get(src, dst='.'):
+    """Alias for pull()"""
     return pull(src, dst)
 
 
 def put(src, dst='~/'):
+    """Alias for push"""
     return push(src, dst)
 
 
 def run_script(local_file, binary=None, freturn=False):
-    """"""
+    """Excecute script.
+
+    Execute "binary < local_file" on localhost or via ssh.
+    Uses run() function for executing.
+
+    Args:
+      local_file (str): script on localhost for executing
+      binary (str): shell for executing, first line of script or 'sh -s'
+      freturn (bool): return tuple if True, else return str
+
+    Return:
+      str if freturn is False: string that contained all stdout messages
+      tuple if freturn is True:
+        string that contained all stdout messages
+        string that contained all stderr
+        int that mean return code of command
+    """
     logger = connect_env.logger
     interactive = global_env['interactive']
     parallel = global_env['parallel']
     host_string = ''.join((connect_env.user,
                            '@',
                            connect_env.host))
-    
+
     if not binary:
         with open(local_file) as f:
             l = f.readline()
@@ -416,7 +461,7 @@ def run_script(local_file, binary=None, freturn=False):
             command
         ))
 
-   # open new connect
+    # open new connect
     with set_connect_env('localhost', connect_env.con_args):
         return run(command, freturn)
 
