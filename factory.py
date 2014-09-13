@@ -239,7 +239,11 @@ def out_loop(p, logger, interactive, host_string):
     sout = ' '
     sumout = ''
     while sout or p.poll() is None:
-        sout = p.stdout.readline()
+        try:
+            sout = p.stdout.readline()
+        except AttributeError:
+            logger.warning("can't process stdout")
+            return ''
         if sout:
             sumout += sout
             logger.info('out: %s', unicode(sout, "UTF-8"))
@@ -268,7 +272,11 @@ def err_loop(p, logger, interactive, host_string):
     serr = ' '
     sumerr = ''
     while serr or p.poll() is None:
-        serr = p.stderr.readline()
+        try:
+            serr = p.stderr.readline()
+        except AttributeError:
+            logger.warning("can't process stderr")
+            return ''
         if serr:
             sumerr += serr
             logger.info('err: %s', unicode(serr, "UTF-8"))
