@@ -186,6 +186,7 @@ def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=Fa
         p = Popen(scommand, stdout=PIPE, stderr=stderr, stdin=PIPE)
     # flush input
     if input:
+        input = str(input)
         if input[-1] not in ('\n', '\r'):
             input += '\n'
         p.stdin.write(input)
