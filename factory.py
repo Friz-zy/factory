@@ -152,7 +152,7 @@ def run(command, use_sudo=False, user='', group='', freturn=False):
                            connect_env.host))
     # run as root
     if use_sudo:
-        if not connect_env.run_as_root:
+        if not connect_env.check_is_root:
             if 'sudo' not in command.split():
                 command = " ".join(('sudo', command))
     # switching user
@@ -643,9 +643,8 @@ def run_tasks_on_host(connect_string, tasks, con_args=''):
       con_args (str): options for ssh
 
     """
-    with set_connect_env(connect_string, con_args) as connect_env:
+    with set_connect_env(connect_string, con_args):
         #TODO: checking first connection via ssh
-        connect_env.check_is_root = check_is_root()
         if global_env['parallel']:
             gevent.sleep(0)
             threads = [gevent.spawn(global_env['functions'][function], *args, **kwargs) for function, args, kwargs in tasks]
@@ -728,6 +727,7 @@ class set_connect_env():
                 connect_env.host
             ))
         )
+        connect_env.check_is_root = check_is_root()
         return connect_env
 
     def __exit__(self, type, value, traceback):
