@@ -131,10 +131,12 @@ def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=Fa
 
     Args:
       command (str): command for executing
-      use_sudo (bool): running with sudo prefix if True and current user not root
+      use_sudo (bool): running with sudo prefix if True and current user not root, default is False
       user (str): username for sudo -u prefix
       group (str): group for sudo -g prefix
-      freturn (bool): return tuple if True, else return str
+      freturn (bool): return tuple if True, else return str, default is False
+      err_to_out (bool): redirect stderr to stdout if True, default is False
+      input (str): str will be flushed to stdin after executed command, default is None
 
     Return:
       str if freturn is False: string that contained all stdout messages
@@ -320,7 +322,9 @@ def sudo(command, user='', group='', freturn=False, err_to_out=False, input=None
       command (str): command for executing
       user (str): username for sudo -u prefix
       group (str): group for sudo -g prefix
-      freturn (bool): return tuple if True, else return str
+      freturn (bool): return tuple if True, else return str, default is False
+      err_to_out (bool): redirect stderr to stdout if True, default is False
+      input (str): str will be flushed to stdin after executed command, default is None
 
     Return:
       str if freturn is False: string that contained all stdout messages
@@ -440,7 +444,10 @@ def run_script(local_file, binary=None, freturn=False, err_to_out=False, input=N
     Args:
       local_file (str): script on localhost for executing
       binary (str): shell for executing, first line of script or 'sh -s'
-      freturn (bool): return tuple if True, else return str
+      freturn (bool): return tuple if True, else return str, default is False
+      err_to_out (bool): redirect stderr to stdout if True, default is False
+      input (str): str will be flushed to stdin after executed command, default is None
+
 
     Return:
       str if freturn is False: string that contained all stdout messages
@@ -482,7 +489,13 @@ def run_script(local_file, binary=None, freturn=False, err_to_out=False, input=N
 
 
 def open_shell(command=None, shell='/bin/bash -i'):
-    """"""
+    """Open shell on host via ssh or subprocess.
+
+    Args:
+      command (str): str will be flushed to stdin after opening shell, default is None
+      shell (str): shell for opening, default is '/bin/bash -i'
+
+    """
     #FIXME: on localhost after each command moves to background
     run(shell, err_to_out=True, input=command)
 
