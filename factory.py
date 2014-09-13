@@ -90,7 +90,7 @@ if (major,minor) < (2,5):
 import gevent
 import gevent.queue
 from gevent.socket import wait_read
-from gevent.subprocess import Popen, PIPE
+from gevent.subprocess import Popen, PIPE, STDOUT
 
 # default variables
 global_env = {'interactive': True,
@@ -126,7 +126,7 @@ class Empty():
 connect_env = Empty()
 
 
-def run(command, use_sudo=False, user='', group='', freturn=False):
+def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=False, input=None):
     """Execute command on host via ssh or subprocess.
 
     Args:
@@ -167,9 +167,13 @@ def run(command, use_sudo=False, user='', group='', freturn=False):
             command = " ".join(('sudo -g %s -s' % group, command))
         else:
             command.replace('sudo', 'sudo -g %s' % group)
+
+    stderr = PIPE
+    if err_to_out:
+        stderr = STDOUT
     # open new connect
     if connect_env.host in global_env['localhost']:
-        p = Popen(command, stdout=PIPE, stderr=PIPE, stdin=PIPE, shell=True)
+        p = Popen(command, stdout=PIPE, stderr=stderr, stdin=PIPE, shell=True)
     else:
         scommand = [
             global_env['ssh_binary'],
@@ -179,7 +183,13 @@ def run(command, use_sudo=False, user='', group='', freturn=False):
             connect_env.con_args,
             command
         ]
-        p = Popen(scommand, stdout=PIPE, stderr=PIPE, stdin=PIPE)
+        p = Popen(scommand, stdout=PIPE, stderr=stderr, stdin=PIPE)
+    # flush input
+    if input:
+        if input[-1] not in ('\n', '\r'):
+            input += '\n'
+        p.stdin.write(input)
+        p.stdin.flush()
     # run another command
     if parallel:
         gevent.sleep(0)
@@ -294,7 +304,7 @@ def in_loop(p, logger, host_string):
             lin = qs
         gevent.sleep(0)
 
-def sudo(command, user='', group='', freturn=False):
+def sudo(command, user='', group='', freturn=False, err_to_out=False, input=None):
     """sudo is alias for run(use_sudo=True).
 
     Args:
@@ -311,7 +321,7 @@ def sudo(command, user='', group='', freturn=False):
         int that mean return code of command
 
     """
-    return run(command, use_sudo=True, user=user, group=group, freturn=freturn)
+    return run(command, use_sudo=True, user=user, group=group, freturn=freturn, err_to_out=err_to_out, input=input)
 
 
 def check_is_root():
@@ -412,7 +422,7 @@ def put(src, dst='~/'):
     return push(src, dst)
 
 
-def run_script(local_file, binary=None, freturn=False):
+def run_script(local_file, binary=None, freturn=False, err_to_out=False, input=None):
     """Excecute script.
 
     Execute "binary < local_file" on localhost or via ssh.
@@ -459,7 +469,13 @@ def run_script(local_file, binary=None, freturn=False):
 
     # open new connect
     with set_connect_env('localhost', connect_env.con_args):
-        return run(command, freturn)
+        return run(command=command, freturn=freturn, err_to_out=err_to_out, input=input)
+
+
+def open_shell(command=None, shell='/bin/bash -i'):
+    """"""
+    #FIXME: on localhost after each command moves to background
+    run(shell, err_to_out=True, input=command)
 
 
 def main():
