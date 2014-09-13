@@ -160,13 +160,13 @@ def run(command, use_sudo=False, user='', group='', freturn=False):
         if 'sudo' not in command.split():
             command = " ".join(('sudo -u %s -s' % user, command))
         else:
-            command.replace('sudo', 'sudo -u %s -s' % user)
+            command.replace('sudo', 'sudo -u %s' % user)
     # switching group
     if group:
         if 'sudo' not in command.split():
             command = " ".join(('sudo -g %s -s' % group, command))
         else:
-            command.replace('sudo', 'sudo -g %s -s' % group)
+            command.replace('sudo', 'sudo -g %s' % group)
     # open new connect
     if connect_env.host in global_env['localhost']:
         p = Popen(command, stdout=PIPE, stderr=PIPE, stdin=PIPE, shell=True)
