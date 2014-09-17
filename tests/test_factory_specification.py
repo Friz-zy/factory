@@ -59,6 +59,19 @@ class TestAPI:
         print out, err
         assert "hello world!" in out
 
+    def test_should_execute_run_function_with_input(self, capsys):
+        sys.argv = ['factory.py', "-r", "python -c 'print(raw_input())'", "input='hello, world!'"]
+        factory.main()
+        out, err = capsys.readouterr()
+        assert "hello, world!" in out
+
+    def test_should_execute_open_shell_function(self, capsys):
+        sys.argv = ['factory.py', "open_shell", 'hello, world!', "python -c 'print(raw_input())'"]
+        factory.main()
+        out, err = capsys.readouterr()
+        assert "hello, world!" in out
+
+
 class TestArgParsing:
     def test_should_parse_splited_arguments(self, capsys):
         sys.argv = ['factory.py', "run", "echo 'hello world!'"]
@@ -130,6 +143,12 @@ class TestFeedback:
         print out, err
         assert "привет, мир!" in out
         assert err == ''
+
+    def test_should_write_command_stderr_to_sys_stdout(self, capsys):
+        sys.argv = ['factory.py', 'run:qwertyuiop,err_to_out=True']
+        factory.main()
+        out, err = capsys.readouterr()
+        assert "/bin/sh: 1: qwertyuiop: not found" in out
 
 
 if __name__ == '__main__':
