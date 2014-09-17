@@ -76,7 +76,7 @@ __status__ = "Development"
 
 import os
 import sys
-from shutil import copy, copytree
+from shutil import copy2, copytree
 from socket import gethostname
 from getpass import getuser
 import logging
@@ -354,7 +354,7 @@ def push(src, dst='~/', pull=False):
     """Copying file or directory.
 
     Copy local file or directory to another host or another localhost place.
-    Uses shutil.copy and shutil.copytree on localhost and scp (by default)
+    Uses shutil.copy2 and shutil.copytree on localhost and scp (by default)
     with -r option.
 
     Args:
@@ -379,7 +379,7 @@ def push(src, dst='~/', pull=False):
         if os.path.exists(src):
             if os.path.isfile(src):
                 try:
-                    copy(src, dst)
+                    copy2(src, dst)
                     return 0
                 except:
                     return 1
