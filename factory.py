@@ -53,6 +53,10 @@ Config files
       filemode='a',
       level=logging.INFO,
 
+  You can update global_env dict via config file:
+    factory.ini, factory.json or factory.yaml
+    or --config PATH cli option
+
 """
 from __future__ import with_statement
 """
@@ -88,21 +92,23 @@ __status__ = "Development"
 
 import os
 import sys
-from shutil import copy2, copytree
-from socket import gethostname
-from getpass import getuser
-import logging
-import argparse
 
 major, minor, micro, releaselevel, serial = sys.version_info
 if (major,minor) < (2,5):
     print 'Sorry, but factory requires python 2.5 or highest. Bye!'
     sys.exit(2)
 
+from shutil import copy2, copytree
+from socket import gethostname
+from getpass import getuser
+import logging
+import argparse
+
 import gevent
 import gevent.queue
 from gevent.socket import wait_read
 from gevent.subprocess import Popen, PIPE, STDOUT
+
 
 if os.path.exists('logging.ini'):
     logging.config.fileConfig('logging.ini')
@@ -600,8 +606,11 @@ def open_shell(command=None, shell='/bin/bash -i'):
 
 
 def main():
-    load_config()
     args = parse_cli()
+    if args.config_file:
+        load_config(args.config_file)
+    else:
+        load_config()
     logging.debug('executing main function')
     logging.debug('arguments from cli and another locals: %s', locals())
     hosts = args.hosts.split(global_env['split_hosts'])
@@ -686,12 +695,63 @@ def parse_cli():
         action='store_true', default=False,
         help='parallel execution with or without interactive cli'
     )
+    parser.add_argument(
+        '--config', dest='config_file',
+        help='ini, json or yaml config file for updating global environment'
+    )
     return parser.parse_args()
 
 
-def load_config():
-    """Set global variables."""
-    logging.debug('setting global settings')
+def load_config(config_file=''):
+    """Set global variables.
+
+    Args:
+      config_file (str): path to config file
+
+    """
+    logging.debug('executing load_config function')
+    logging.debug('arguments from cli and another locals: %s', locals())
+
+    # processing config file
+    if not os.path.exists(config_file):
+        if os.path.exists('factory.ini'):
+            config_file = 'factory.ini'
+        elif os.path.exists('factory.json'):
+            config_file = 'factory.json'
+        elif os.path.exists('factory.yaml'):
+            config_file = 'factory.yaml'
+        else:
+            config_file = ''
+    logging.debug('config file: %s', config_file)
+    if config_file:
+        if '.ini' in config_file:
+            try:
+                from ConfigParser import ConfigParser
+            except ImportError:
+                from configparser import ConfigParser
+            c = ConfigParser()
+            try:
+                c.read(config_file)
+                global_env.update(c.__dict__)
+            except:
+                logger.warning("can't load config from %s", config_file, exc_info=True)
+        elif '.json' in config_file:
+            try:
+                import json
+                with open(config_file, 'r') as f:
+                    global_env.update(json.load(f))
+            except:
+                logger.warning("can't load config from %s", config_file, exc_info=True)
+        elif '.yaml' in config_file:
+            try:
+                import yaml
+                with open(config_file, 'r') as f:
+                    global_env.update(yaml.load(f))
+            except:
+                logger.warning("can't load config from %s", config_file, exc_info=True)
+        else:
+            logger.warning("can't determine file format for %s", config_file)
+
     global_env['functions'] = globals()
 
     global_env['localhost'] = ['localhost',
@@ -699,6 +759,8 @@ def load_config():
                                gethostname(),]
 
     global_env['stdin_queue'] = gevent.queue.Queue()
+
+    logging.debug('global environment: %s', global_env)
 
 
 def parse_functions(l_arguments):
