@@ -83,7 +83,7 @@ class TestArgParsing:
         sys.argv = ['factory.py', "run", "echo 'hello world!'", "run", "echo 'hello world!'"]
         factory.main()
         out, err = capsys.readouterr()
-        assert out.count('hello world!') == 2
+        assert out.count('hello world!') == 4
 
     def test_should_parse_many_arguments(self, capsys):
         sys.argv = ['factory.py', "-nr", "echo 'hello world!'"]
@@ -94,10 +94,11 @@ class TestArgParsing:
             assert "hello world!" in f.readlines()[-1]
 
     def test_should_parallel_executing(self, capsys):
-        sys.argv = ['factory.py', '-p', "run", "sleep 1; echo 'world!'", "run", "echo 'hello'"]
+        sys.argv = ['factory.py', '-p', "run", "sleep 1; echo -n 'world!'", "run", "echo -n 'hello'"]
         factory.main()
         out, err = capsys.readouterr()
-        assert out.find('hello') < out.find('world!')
+        print out
+        assert out.rfind('hello') < out.rfind('world!')
 
 
 class TestFeedback:
@@ -107,11 +108,11 @@ class TestFeedback:
         out, err = capsys.readouterr()
         assert "hello world!" in out
 
-    def test_should_write_command_stderr_to_sys_stderr(self, capsys):
+    def test_should_write_command_stderr_to_sys_stdout(self, capsys):
         sys.argv = ['factory.py', 'run:qwertyuiop']
         factory.main()
         out, err = capsys.readouterr()
-        assert "/bin/sh: 1: qwertyuiop: not found" in err
+        assert "/bin/sh: 1: qwertyuiop: not found" in out
 
     def test_should_communicate_with_stdin(self, capsys):
         sys.argv = ['factory.py', "sh"]
@@ -125,7 +126,7 @@ class TestFeedback:
     def test_should_write_logs(self):
         sys.argv = ['factory.py', "run", "echo 'hello world!'"]
         factory.main()
-        with open('factory.logc', 'r') as f:
+        with open('factory.log', 'r') as f:
             assert "hello world!" in f.readlines()[-2]
 
     def test_should_only_write_logs(self, capsys):

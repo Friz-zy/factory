@@ -92,6 +92,29 @@ import gevent.queue
 from gevent.socket import wait_read
 from gevent.subprocess import Popen, PIPE, STDOUT
 
+if os.path.exists('logging.ini'):
+    logging.config.fileConfig('logging.ini')
+elif os.path.exists('logging.json'):
+    import json
+    with open('logging.json', 'r') as f:
+        config = json.load(f)
+    logging.config.dictConfig(config)
+elif os.path.exists('logging.yaml'):
+    import yaml
+    with open('logging.yaml', 'r') as f:
+        config = yaml.load(f)
+    logging.config.dictConfig(config)
+else:
+    logging.basicConfig(
+        format=u'%(asctime)s  %(name)s\t%(levelname)-8s\t%(message)s',
+        datefmt='%d %b %Y %H:%M:%S',
+        stream=sys.stdout, # will be replacing by filename
+        filename= __file__.replace('.py', '.log'), # save log as ./factory.log
+        filemode='a',
+        level=logging.INFO,
+    )
+    logging.warning("can't load logging config, used standart configuration", exc_info=True)
+
 # default variables
 global_env = {'interactive': True,
               'parallel': False,
@@ -123,6 +146,9 @@ class Empty():
     def __init__(self):
         pass
 
+    def __str__(self):
+        return self.__dict__
+
 connect_env = Empty()
 
 
@@ -152,29 +178,42 @@ def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=Fa
     host_string = ''.join((connect_env.user,
                            '@',
                            connect_env.host))
+    logger.debug('executing run function')
+    logger.debug('arguments for executing and another locals: %s', locals())
     # run as root
+    logger.debug('case use_sudo')
     if use_sudo:
         if not connect_env.check_is_root:
             if 'sudo' not in command.split():
                 command = " ".join(('sudo', command))
+        logger.debug('command: %s', command)
     # switching user
+    logger.debug('case user')
     if user:
         if 'sudo' not in command.split():
             command = " ".join(('sudo -u %s -s' % user, command))
         else:
             command.replace('sudo', 'sudo -u %s' % user)
+        logger.debug('command: %s', command)
     # switching group
+    logger.debug('case group')
     if group:
         if 'sudo' not in command.split():
             command = " ".join(('sudo -g %s -s' % group, command))
         else:
             command.replace('sudo', 'sudo -g %s' % group)
+        logger.debug('command: %s', command)
+
+    # logging
+    logger.info('in: %s', unicode(command, "UTF-8"))
 
     stderr = PIPE
     if err_to_out:
         stderr = STDOUT
+    logger.debug('stderr: %s', stderr)
     # open new connect
     if connect_env.host in global_env['localhost']:
+        logger.debug('executing command %s with shell=True', command)
         p = Popen(command, stdout=PIPE, stderr=stderr, stdin=PIPE, shell=True)
     else:
         scommand = [
@@ -185,33 +224,40 @@ def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=Fa
             connect_env.con_args,
             command
         ]
+        logger.debug('executing command %s', scommand)
         p = Popen(scommand, stdout=PIPE, stderr=stderr, stdin=PIPE)
     # flush input
     if input:
         input = str(input)
         if input[-1] not in ('\n', '\r'):
             input += '\n'
+        logger.debug('flushing input %s', input)
         p.stdin.write(input)
         p.stdin.flush()
     # run another command
     if parallel:
         gevent.sleep(0)
+        logger.debug('run another command with gevent.sleep(0)')
     # processing std loop
     threads = []
     if interactive:
-        args = (p, logger, host_string)
+        args = (p, logger)
         gin = gevent.spawn(in_loop, *args)
+        logger.debug('executing in_loop with args %s', args)
         threads.append(gin)
 
-    args = (p, logger, interactive, host_string)
+    args = (p, logger)
     gout = gevent.spawn(out_loop, *args)
+    logger.debug('executing out_loop with args %s', args)
     threads.append(gout)
 
-    args = (p, logger, interactive, host_string)
+    args = (p, logger)
     gerr = gevent.spawn(err_loop, *args)
+    logger.debug('executing err_loop with args %s', args)
     threads.append(gerr)
 
     gevent.joinall(threads)
+    logger.debug('child process has terminated with status %s', p.returncode)
     #TODO: check returncode if returncode==None
     sumout = gout.value
     sumerr = gerr.value
@@ -220,11 +266,13 @@ def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=Fa
         p.terminate()
         p.kill()
     if freturn:
+        logger.debug('return sumout %s, sumerr %s, status %s', sumout, sumerr, status)
         return (sumout, sumerr, status)
+    logger.debug('return sumout %s', sumout)
     return sumout
 
 
-def out_loop(p, logger, interactive, host_string):
+def out_loop(p, logger):
     """Loop for command stdout.
 
     Check executing command stdout and put messages to log and sys.stdout.
@@ -232,8 +280,6 @@ def out_loop(p, logger, interactive, host_string):
     Args:
       p (Popen object): executing command
       logger (logging.logger object): command logger instance
-      interactive (bool): True if interactive mode, else False
-      host_string (str): string for processing sys.stdout
 
     Return:
       str: string that contained all stdout messages
@@ -241,23 +287,25 @@ def out_loop(p, logger, interactive, host_string):
     """
     sout = ' '
     sumout = ''
+    logger = connect_env.logger
+    logger.debug('executing out_loop function')
+    logger.debug('arguments for executing and another locals: %s', locals())
     while sout or p.poll() is None:
+        logger.debug('new iteration of reading stdout')
         try:
             sout = p.stdout.readline()
         except AttributeError:
-            logger.warning("can't process stdout")
+            logger.warning("can't process stdout", exc_info=True)
             return ''
         if sout:
             sumout += sout
             logger.info('out: %s', unicode(sout, "UTF-8"))
             #TODO: y\n; password
-            if interactive:
-                sys.stdout.write('%s out: %s' % (host_string, sout))
-                sys.stdout.flush()
+    logger.debug('return sumout %s', sumout)
     return sumout
 
 
-def err_loop(p, logger, interactive, host_string):
+def err_loop(p, logger):
     """Loop for command stderr.
 
     Check executing command stderr and put messages to log and sys.stderr.
@@ -265,8 +313,6 @@ def err_loop(p, logger, interactive, host_string):
     Args:
       p (Popen object): executing command
       logger (logging.logger object): command logger instance
-      interactive (bool): True if interactive mode, else False
-      host_string (str): string for processing sys.stderr
 
     Return:
       str: string that contained all stderr messages
@@ -274,22 +320,24 @@ def err_loop(p, logger, interactive, host_string):
     """
     serr = ' '
     sumerr = ''
+    logger = connect_env.logger
+    logger.debug('executing err_loop function')
+    logger.debug('arguments for executing and another locals: %s', locals())
     while serr or p.poll() is None:
+        logger.debug('new iteration of reading stderr')
         try:
             serr = p.stderr.readline()
         except AttributeError:
-            logger.warning("can't process stderr")
+            logger.warning("can't process stderr", exc_info=True)
             return ''
         if serr:
             sumerr += serr
             logger.info('err: %s', unicode(serr, "UTF-8"))
-            if interactive:
-                sys.stderr.write('%s err: %s' % (host_string, serr))
-                sys.stderr.flush()
+    logger.debug('return sumerr %s', sumerr)
     return sumerr
 
 
-def in_loop(p, logger, host_string):
+def in_loop(p, logger):
     """Loop for command stdin.
 
     Check global stdin queue and put lines from it to command stdin.
@@ -297,17 +345,22 @@ def in_loop(p, logger, host_string):
     Args:
       p (Popen object): executing command
       logger (logging.logger object): command logger instance (currently not used)
-      host_string (str): string for processing sys.stdout (currently not used)
 
     """
     lin = 0
+    logger = connect_env.logger
+    logger.debug('executing in_loop function')
+    logger.debug('arguments for executing and another locals: %s', locals())
     while p.poll() is None:
+        logger.debug('new iteration of reading global messaging queue')
         if global_env['stdin_queue'].qsize() > lin:
             queue = global_env['stdin_queue'].copy()
             qs = queue.qsize()
+            logger.debug('local queue %s with len %s', queue, qs)
             for i, l in enumerate(queue):
                 if i >= lin:
                     # TODO: crossystem end of line \n \r \nr
+                    logger.debug('flush %s to stdin', l)
                     p.stdin.write(l)
                     p.stdin.flush()
                 if queue.qsize() == 0:
@@ -334,6 +387,9 @@ def sudo(command, user='', group='', freturn=False, err_to_out=False, input=None
         int that mean return code of command
 
     """
+    logger = connect_env.logger
+    logger.debug('executing sudo function')
+    logger.debug('arguments for executing and another locals: %s', locals())
     return run(command, use_sudo=True, user=user, group=group, freturn=freturn, err_to_out=err_to_out, input=input)
 
 
@@ -344,7 +400,11 @@ def check_is_root():
       bool: True if current user uid is 0, else False
 
     """
+    logger = connect_env.logger
+    logger.debug('executing check_is_root function')
+    logger.debug('arguments for executing and another locals: %s', locals())
     out, err, status = run('id -u', freturn=True)
+    logger.debug('out %s, err %s, status %s', out, err, status)
     if not status:
         return not int(out)
     return False
@@ -369,28 +429,36 @@ def push(src, dst='~/', pull=False):
 
     """
     logger = connect_env.logger
-    interactive = global_env['interactive']
-    parallel = global_env['parallel']
     host_string = ''.join((connect_env.user,
                            '@',
                            connect_env.host))
-
+    logger.debug('executing push function')
+    logger.debug('arguments for executing and another locals: %s', locals())
     if connect_env.host in global_env['localhost']:
+        logger.debug('used shutil.copy*')
         if os.path.exists(src):
+            logger.debug('os.path.exists(src) is True')
             if os.path.isfile(src):
+                logger.debug('os.path.isfile(src) is True, used shutil.copy2')
                 try:
                     copy2(src, dst)
+                    logger.debug('copying is ok, return zero')
                     return 0
                 except:
+                    logger.warning("can't copy %s to %s", src, dst, info=True)
                     return 1
             else:
+                logger.debug('os.path.isfile(src) is False, used shutil.copytree')
                 try:
                     copytree(src, dst)
+                    logger.debug('copying is ok, return zero')
                     return 0
                 except:
+                    logger.warning("can't copy %s to %s", src, dst, info=True)
                     return 1
         return 1
     else:
+        logger.debug('used factory.run')
         if pull:
             command = '-r' + host_string + ':' + src + ' ' + dst
         else:
@@ -404,9 +472,11 @@ def push(src, dst='~/', pull=False):
         ]
 
         # open new connect
+        logger.debug('run command: %s', command)
         with set_connect_env('localhost', connect_env.con_args):
             sumout, sumerr, status = run(command, freturn=True)
 
+        logger.debug('return status: %s', status)
         return status
 
 def pull(src, dst='.'):
@@ -422,16 +492,25 @@ def pull(src, dst='.'):
         status of subprocess with scp
 
     """
+    logger = connect_env.logger
+    logger.debug('executing pull function')
+    logger.debug('arguments for executing and another locals: %s', locals())
     return push(src, dst, True)
 
 
 def get(src, dst='.'):
     """Alias for pull()"""
+    logger = connect_env.logger
+    logger.debug('executing get function')
+    logger.debug('arguments for executing and another locals: %s', locals())
     return pull(src, dst)
 
 
 def put(src, dst='~/'):
     """Alias for push"""
+    logger = connect_env.logger
+    logger.debug('executing put function')
+    logger.debug('arguments for executing and another locals: %s', locals())
     return push(src, dst)
 
 
@@ -457,19 +536,22 @@ def run_script(local_file, binary=None, freturn=False, err_to_out=False, input=N
         int that mean return code of command
     """
     logger = connect_env.logger
-    interactive = global_env['interactive']
-    parallel = global_env['parallel']
     host_string = ''.join((connect_env.user,
                            '@',
                            connect_env.host))
-
+    logger.debug('executing run_script function')
+    logger.debug('arguments for executing and another locals: %s', locals())
     if not binary:
+        logger.debug('trying get binary from script file')
         with open(local_file) as f:
             l = f.readline()
+        logger.debug('firs line from script file: %s', l)
         if l.startswith('#'):
             binary = l.strip()[2:]
+            logger.debug('binary: %s', binary)
         else:
             binary = 'sh -s'
+            logger.debug('used default binary: %s', binary)
 
     command = binary + " < " + local_file
 
@@ -484,6 +566,7 @@ def run_script(local_file, binary=None, freturn=False, err_to_out=False, input=N
         ))
 
     # open new connect
+    logger.debug('run command: %s', command)
     with set_connect_env('localhost', connect_env.con_args):
         return run(command=command, freturn=freturn, err_to_out=err_to_out, input=input)
 
@@ -495,14 +578,20 @@ def open_shell(command=None, shell='/bin/bash -i'):
       command (str): str will be flushed to stdin after opening shell, default is None
       shell (str): shell for opening, default is '/bin/bash -i'
 
-    """
     #FIXME: on localhost after each command moves to background
+
+    """
+    logger = connect_env.logger
+    logger.debug('executing open_shell function')
+    logger.debug('arguments for executing and another locals: %s', locals())
     run(shell, err_to_out=True, input=command)
 
 
 def main():
     load_config()
     args = parse_cli()
+    logging.debug('executing main function')
+    logging.debug('arguments from cli and another locals: %s', locals())
     hosts = args.hosts.split(global_env['split_hosts'])
     # -r -s shortcuts
     if args.sudo:
@@ -511,6 +600,7 @@ def main():
         args.function.insert(0, 'run')
 
     # update globals interactive and parallel from cli
+    logging.debug('updating globals interactive and parallel from cli')
     global_env['interactive'] = not args.non_interactive
     global_env['parallel'] = args.parallel
 
@@ -518,14 +608,19 @@ def main():
 
     # start of stdin loop
     if global_env['interactive']:
+        logging.debug('starting global stdin loop')
         sloop = gevent.spawn(stdin_loop)
 
     if not global_env['parallel']:
+        logging.debug('hosts will be processed one by one')
         for host in hosts:
+            logging.debug('host %s, functions %s', host, functions_to_execute)
             run_tasks_on_host(host, functions_to_execute)
     else:
         threads = []
+        logging.debug('hosts will be processed in parallel')
         for host in hosts:
+            logging.debug('host %s, functions %s', host, functions_to_execute)
             args = (host, functions_to_execute)
             kwargs = {}
             threads.append(gevent.spawn(run_tasks_on_host, *args, **kwargs))
@@ -533,6 +628,7 @@ def main():
 
     # finish stdin loop
     if global_env['interactive']:
+        logging.debug('finishing global stdin loop')
         sloop.kill()
 
 
@@ -545,6 +641,7 @@ def parse_cli():
       namespace: like Namespace(foo='FOO', x=None)
 
     """
+    logging.debug('parsing %s', sys.argv)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         'function', nargs='+',
@@ -582,17 +679,8 @@ def parse_cli():
 
 def load_config():
     """Set global variables."""
+    logging.debug('setting global settings')
     global_env['functions'] = globals()
-    
-    # TODO: unicode for logging
-    logging.basicConfig(
-        format=u'%(asctime)s  %(name)s\t[%(levelname)-8s]\t%(message)s',
-        datefmt='%d %b %Y %H:%M:%S',
-        stream=sys.stdout, # will be replacing by filename
-        filename= __file__.replace('.py', '.log'), # save log as ./factory.log
-        filemode='a',
-        level=logging.INFO,
-    )
 
     global_env['localhost'] = ['localhost',
                                '127.0.0.1',
@@ -626,16 +714,22 @@ def parse_functions(l_arguments):
       ('run', ["echo 'hello world!'"], {'use_sudo': 'True'})]
 
     """
+    logging.debug('executing parse_functions function')
+    logging.debug('arguments %s', l_arguments)
+
     functions = []
     tasks = []
 
     # an implicit execution
+    logging.debug('checking first argument')
     zero = l_arguments[0].split(global_env['split_function'])[0]
     if zero not in global_env['functions'].keys():
-        logging.warning('Can not find function, executing built-in run()')
+        logging.warning('can not find function, executing built-in run')
         l_arguments.insert(0, 'run')
+        logging.debug('new arguments %s', l_arguments)
 
-    # step 1: split all to lists of function with args
+    # step 1: split all to lists of functions with args
+    logging.debug('spliting all arguments to lists of functions with args')
     for f in l_arguments:
         if f in global_env['functions'].keys():
             functions.append([f])
@@ -648,8 +742,10 @@ def parse_functions(l_arguments):
                 functions[-1].append(f)
         else:
             functions[-1].append(f)
+    logging.debug('functions %s', functions)
 
     # step 2: parse args and kwargs for each function
+    logging.debug('parsing args and kwargs for each function')
     for f in functions:
         fnct = f[0]
         args = f[1:]
@@ -665,6 +761,7 @@ def parse_functions(l_arguments):
             else:
                 break
         tasks.append((fnct, args, kwargs))
+    logging.debug('tasks %s', tasks)
 
     return tasks
 
@@ -681,13 +778,17 @@ def run_tasks_on_host(connect_string, tasks, con_args=''):
       con_args (str): options for ssh
 
     """
+    logging.debug('executing run_tasks_on_host function')
+    logging.debug('arguments for executing and another locals: %s', locals())
     with set_connect_env(connect_string, con_args):
         #TODO: checking first connection via ssh
         if global_env['parallel']:
             gevent.sleep(0)
+            logging.debug('tasks will be processed in parallel')
             threads = [gevent.spawn(global_env['functions'][function], *args, **kwargs) for function, args, kwargs in tasks]
             gevent.joinall(threads)
         else:
+            logging.debug('tasks will be processed one by one')
             for function, args, kwargs in tasks:
                 global_env['functions'][function](*args, **kwargs)
 
@@ -695,9 +796,15 @@ def run_tasks_on_host(connect_string, tasks, con_args=''):
 
 def stdin_loop():
     """Global loop: wait for sys.stdin and put line from it to global queue."""
+    logging.debug('executing stdin_loop function')
     while True:
-        wait_read(sys.stdin.fileno())
+        try:
+            wait_read(sys.stdin.fileno())
+        except AttributeError:
+            logging.warning("can't process sys.stdout", exc_info=True)
+            break
         l = sys.stdin.readline()
+        logging.debug('message from sys.stdin: %s', l)
         global_env['stdin_queue'].put_nowait(l)
 
 
@@ -711,6 +818,7 @@ class set_connect_env():
       port (str): port for connect
       con_args (str): options for ssh
       logger (logging.logger object): logger object for this connect
+      check_is_root (bool): True if connected as root, else False
 
     Examples:
       >>> load_config()
@@ -718,6 +826,7 @@ class set_connect_env():
       ...     connect_env.__dict__ # doctest: +NORMALIZE_WHITESPACE
       {'connect_string': 'user@host:port',
       'con_args': '',
+      'check_is_root': False,
       'host': 'host',
       'user': 'user',
       'logger': ...,
@@ -732,6 +841,8 @@ class set_connect_env():
           con_args (str): options for ssh
 
         """
+        logging.debug('initializing of set_connect_env class')
+        logging.debug('arguments for __init__ and another locals: %s', locals())
         self.cs = connect_string
         self.ca = con_args
 
@@ -742,6 +853,8 @@ class set_connect_env():
           connect_env object with most of all atributes
 
         """
+        logging.debug('set atributes to connect_env object')
+        logging.debug('arguments for __enter__ and another locals: %s', locals())
         connect_string = self.cs
         con_args = self.ca
         connect_env.connect_string = connect_string
@@ -765,7 +878,21 @@ class set_connect_env():
                 connect_env.host
             ))
         )
+        # add logging to interactive output
+        if global_env['interactive']:
+            logging.debug('adding logging to interactive output')
+            # only info for stdout
+            info = logging.StreamHandler(sys.stdout)
+            info.addFilter(OnlyOneLevelLogs(logging.INFO))
+            info.setFormatter(logging.Formatter('%(name)s %(message)s'))
+            connect_env.logger.addHandler(info)
+            # all another to stderr
+            error = logging.StreamHandler(sys.stderr)
+            error.addFilter(WithoutOneLevelLogs(logging.INFO))
+            error.setFormatter(logging.Formatter('%(name)s %(message)s'))
+            connect_env.logger.addHandler(error)
         connect_env.check_is_root = check_is_root()
+        logging.debug('connect_env: %s', connect_env)
         return connect_env
 
     def __exit__(self, type, value, traceback):
@@ -774,7 +901,54 @@ class set_connect_env():
         FIXME: is it really works?! I doesn't think so...
 
         """
+        logging.debug('reinitialization global connect_env as Empty class')
         connect_env = Empty()
+
+
+class OnlyOneLevelLogs(object):
+    """Logging handler filter"""
+    def __init__(self, level):
+        """Initializing of  OnlyOneLevelLogs class.
+
+        Args:
+          level (logging level): only this level will be caught
+
+        """
+        logging.debug('initializing of OnlyOneLevelLogs class')
+        logging.debug('arguments for __init__ and another locals: %s', locals())
+        self.level = level
+
+    def filter(self, record):
+        """Filtering logging record
+
+        Args:
+          record (logging record): record that will be filtered
+
+        """
+        return record.levelno == self.level
+
+
+class WithoutOneLevelLogs(object):
+    """Logging handler filter"""
+    def __init__(self, level):
+        """Initializing of  WithoutOneLevelLogs class.
+
+        Args:
+          level (logging level): only this level will not be caught
+
+        """
+        logging.debug('initializing of WithoutOneLevelLogs class')
+        logging.debug('arguments for __init__ and another locals: %s', locals())
+        self.level = level
+
+    def filter(self, record):
+        """Filtering logging record
+
+        Args:
+          record (logging record): record that will be filtered
+
+        """
+        return record.levelno != self.level
 
 
 if __name__ == '__main__':
