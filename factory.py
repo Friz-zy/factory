@@ -41,6 +41,18 @@ Attributes:
     logger (logging.logger object): logger object for this connect
     check_is_root (bool): True if connected as root, else False
 
+Config files
+  Factory uses standart python logging module,
+    so you can set your own config via config file:
+      logging.ini, logging.json or logging.yaml
+    hardcode logging config:
+      format=u'%(asctime)s  %(name)s\t%(levelname)-8s\t%(message)s',
+      datefmt='%d %b %Y %H:%M:%S',
+      stream=sys.stdout, # will be replacing by filename
+      filename= __file__.replace('.py', '.log'), # save log as ./factory.log
+      filemode='a',
+      level=logging.INFO,
+
 """
 from __future__ import with_statement
 """
@@ -84,7 +96,7 @@ import argparse
 
 major, minor, micro, releaselevel, serial = sys.version_info
 if (major,minor) < (2,5):
-    # provide advice on getting version 2.5 or higher.
+    print 'Sorry, but factory requires python 2.5 or highest. Bye!'
     sys.exit(2)
 
 import gevent
