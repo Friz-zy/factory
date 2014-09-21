@@ -736,23 +736,23 @@ def load_config(config_file=''):
                 c.read(config_file)
                 global_env.update(c.__dict__)
             except:
-                logger.warning("can't load config from %s", config_file, exc_info=True)
+                logging.warning("can't load config from %s", config_file, exc_info=True)
         elif '.json' in config_file:
             try:
                 import json
                 with open(config_file, 'r') as f:
                     global_env.update(json.load(f))
             except:
-                logger.warning("can't load config from %s", config_file, exc_info=True)
+                logging.warning("can't load config from %s", config_file, exc_info=True)
         elif '.yaml' in config_file:
             try:
                 import yaml
                 with open(config_file, 'r') as f:
                     global_env.update(yaml.load(f))
             except:
-                logger.warning("can't load config from %s", config_file, exc_info=True)
+                logging.warning("can't load config from %s", config_file, exc_info=True)
         else:
-            logger.warning("can't determine file format for %s", config_file)
+            logging.warning("can't determine file format for %s", config_file)
 
     global_env['functions'] = globals()
 
