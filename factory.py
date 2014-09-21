@@ -110,28 +110,30 @@ from gevent.socket import wait_read
 from gevent.subprocess import Popen, PIPE, STDOUT
 
 
-if os.path.exists('logging.ini'):
-    logging.config.fileConfig('logging.ini')
-elif os.path.exists('logging.json'):
-    import json
-    with open('logging.json', 'r') as f:
-        config = json.load(f)
-    logging.config.dictConfig(config)
-elif os.path.exists('logging.yaml'):
-    import yaml
-    with open('logging.yaml', 'r') as f:
-        config = yaml.load(f)
-    logging.config.dictConfig(config)
-else:
-    logging.basicConfig(
-        format=u'%(asctime)s  %(name)s\t%(levelname)-8s\t%(message)s',
-        datefmt='%d %b %Y %H:%M:%S',
-        stream=sys.stdout, # will be replacing by filename
-        filename= __file__.replace('.py', '.log'), # save log as ./factory.log
-        filemode='a',
-        level=logging.INFO,
-    )
-    logging.warning("can't load logging config, used standart configuration", exc_info=True)
+logging.basicConfig(
+    format=u'%(asctime)s  %(name)s\t%(levelname)-8s\t%(message)s',
+    datefmt='%d %b %Y %H:%M:%S',
+    stream=sys.stdout, # will be replacing by filename
+    filename= __file__.replace('.py', '.log'), # save log as ./factory.log
+    filemode='a',
+    level=logging.INFO,
+)
+
+try:
+    if os.path.exists('logging.ini'):
+        logging.config.fileConfig('logging.ini')
+    elif os.path.exists('logging.json'):
+        import json
+        with open('logging.json', 'r') as f:
+            config = json.load(f)
+        logging.config.dictConfig(config)
+    elif os.path.exists('logging.yaml'):
+        import yaml
+        with open('logging.yaml', 'r') as f:
+            config = yaml.load(f)
+        logging.config.dictConfig(config)
+except:
+    logging.error("can't load logging config, used standart configuration", exc_info=True)
 
 # default variables
 global_env = {'interactive': True,
