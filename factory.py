@@ -41,7 +41,7 @@ Attributes:
     logger (logging.logger object): logger object for this connect
     check_is_root (bool): True if connected as root, else False
 
-Config files
+Config files:
   Factory uses standart python logging module,
     so you can set your own config via config file:
       logging.ini, logging.json or logging.yaml
@@ -706,6 +706,11 @@ def parse_cli():
 
 def load_config(config_file=''):
     """Set global variables.
+
+    Hardcode:
+      global_env['functions'] = globals()
+      global_env['localhost'] = ['localhost', '127.0.0.1', gethostname(),]
+      global_env['stdin_queue'] = gevent.queue.Queue()
 
     Args:
       config_file (str): path to config file
