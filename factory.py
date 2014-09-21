@@ -474,7 +474,9 @@ def push(src, dst='~/', pull=False):
                 except:
                     logger.warning("can't copy %s to %s", src, dst, info=True)
                     return 1
-        return 1
+        else:
+            logger.warning("%s path does not exists", src)
+            return 1
     else:
         logger.debug('used factory.run')
         if pull:
