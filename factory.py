@@ -315,7 +315,7 @@ def out_loop(p, logger):
         try:
             sout = p.stdout.readline()
         except AttributeError:
-            logger.warning("can't process stdout", exc_info=True)
+            logger.error("can't process stdout", exc_info=True)
             return ''
         if sout:
             sumout += sout
@@ -348,7 +348,7 @@ def err_loop(p, logger):
         try:
             serr = p.stderr.readline()
         except AttributeError:
-            logger.warning("can't process stderr", exc_info=True)
+            logger.error("can't process stderr", exc_info=True)
             return ''
         if serr:
             sumerr += serr
@@ -465,7 +465,7 @@ def push(src, dst='~/', pull=False):
                     logger.debug('copying is ok, return zero')
                     return 0
                 except:
-                    logger.warning("can't copy %s to %s", src, dst, info=True)
+                    logger.error("can't copy %s to %s", src, dst, info=True)
                     return 1
             else:
                 logger.debug('os.path.isfile(src) is False, used shutil.copytree')
@@ -474,10 +474,10 @@ def push(src, dst='~/', pull=False):
                     logger.debug('copying is ok, return zero')
                     return 0
                 except:
-                    logger.warning("can't copy %s to %s", src, dst, info=True)
+                    logger.error("can't copy %s to %s", src, dst, info=True)
                     return 1
         else:
-            logger.warning("%s path does not exists", src)
+            logger.error("%s path does not exists", src)
             return 1
     else:
         logger.debug('used factory.run')
@@ -743,23 +743,23 @@ def load_config(config_file=''):
                 c.read(config_file)
                 global_env.update(c.__dict__)
             except:
-                logging.warning("can't load config from %s", config_file, exc_info=True)
+                logging.error("can't load config from %s", config_file, exc_info=True)
         elif '.json' in config_file:
             try:
                 import json
                 with open(config_file, 'r') as f:
                     global_env.update(json.load(f))
             except:
-                logging.warning("can't load config from %s", config_file, exc_info=True)
+                logging.error("can't load config from %s", config_file, exc_info=True)
         elif '.yaml' in config_file:
             try:
                 import yaml
                 with open(config_file, 'r') as f:
                     global_env.update(yaml.load(f))
             except:
-                logging.warning("can't load config from %s", config_file, exc_info=True)
+                logging.error("can't load config from %s", config_file, exc_info=True)
         else:
-            logging.warning("can't determine file format for %s", config_file)
+            logging.error("can't determine file format for %s", config_file)
 
     global_env['functions'] = globals()
 
@@ -884,7 +884,7 @@ def stdin_loop():
         try:
             wait_read(sys.stdin.fileno())
         except AttributeError:
-            logging.warning("can't process sys.stdout", exc_info=True)
+            logging.error("can't process sys.stdout", exc_info=True)
             break
         l = sys.stdin.readline()
         logging.debug('message from sys.stdin: %s', l)
