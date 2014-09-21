@@ -25,3 +25,11 @@ def a(tmpdir):
 @pytest.fixture()
 def b(tmpdir):
     return str(tmpdir.join('b'))
+
+
+@pytest.fixture()
+def config(tmpdir):
+    config = tmpdir.join('factory.json')
+    with open(str(config), 'w') as f:
+        f.write("{'split_function': ';'}\n")
+    return str(config)

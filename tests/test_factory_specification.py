@@ -151,6 +151,12 @@ class TestFeedback:
         out, err = capsys.readouterr()
         assert "/bin/sh: 1: qwertyuiop: not found" in out
 
+    def test_should_load_config(self, tmpdir, config, capsys):
+        sys.argv = ['factory.py', '--config', config, "run:echo 'hello world!'"]
+        factory.main()
+        out, err = capsys.readouterr()
+        assert "hello world!" in out
+
 
 if __name__ == '__main__':
     pytest.main()
