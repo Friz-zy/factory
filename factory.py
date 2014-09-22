@@ -413,6 +413,33 @@ def sudo(command, user='', group='', freturn=False, err_to_out=False, input=None
     return run(command, use_sudo=True, user=user, group=group, freturn=freturn, err_to_out=err_to_out, input=input)
 
 
+def local(command, use_sudo=False, user='', group='', freturn=False, err_to_out=False, input=None):
+    """Execute command on localhost via subprocess.
+
+    Args:
+      command (str): command for executing
+      use_sudo (bool): running with sudo prefix if True and current user not root, default is False
+      user (str): username for sudo -u prefix
+      group (str): group for sudo -g prefix
+      freturn (bool): return tuple if True, else return str, default is False
+      err_to_out (bool): redirect stderr to stdout if True, default is False
+      input (str): str will be flushed to stdin after executed command, default is None
+
+    Return:
+      str if freturn is False: string that contained all stdout messages
+      tuple if freturn is True:
+        string that contained all stdout messages
+        string that contained all stderr
+        int that mean return code of command
+
+    """
+    logger = connect_env.logger
+    logger.debug('executing local function')
+    logger.debug('arguments for executing and another locals: %s', locals())
+    with set_connect_env('localhost', connect_env.con_args):
+        return run(command, use_sudo=use_sudo, user=user, group=group, freturn=freturn, err_to_out=err_to_out, input=input)
+
+
 def check_is_root():
     """Check uid via running id -u command.
 
@@ -495,8 +522,7 @@ def push(src, dst='~/', pull=False):
 
         # open new connect
         logger.debug('run command: %s', command)
-        with set_connect_env('localhost', connect_env.con_args):
-            sumout, sumerr, status = run(command, freturn=True)
+        sumout, sumerr, status = local(command, freturn=True)
 
         logger.debug('return status: %s', status)
         return status
@@ -589,8 +615,7 @@ def run_script(local_file, binary=None, freturn=False, err_to_out=False, input=N
 
     # open new connect
     logger.debug('run command: %s', command)
-    with set_connect_env('localhost', connect_env.con_args):
-        return run(command=command, freturn=freturn, err_to_out=err_to_out, input=input)
+    return local(command=command, freturn=freturn, err_to_out=err_to_out, input=input)
 
 
 def open_shell(command=None, shell='/bin/bash -i'):
