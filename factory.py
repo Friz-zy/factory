@@ -31,6 +31,8 @@ Attributes:
     scp_binary (str): path to scp binary, default is 'scp'
     scp_port_option (str): scp port option, default is '-P'
     stdin_queue (gevent queue object): global queue for sys.stdin messages in interactive mode
+    user (str): username for ssh login, default is current user (via getuser())
+    hosts (tuple): tuple with connection strings like user@host:port, default is ['localhost']
 
   connect_env (Empty class object): global class instance for connect environment
     connect_string (str): [user@]host[:port]
@@ -160,7 +162,9 @@ global_env = {'interactive': True,
               'ssh_port_option': '-p',
               'scp_binary': 'scp',
               'scp_port_option': '-P',
-              'stdin_queue': None,}
+              'stdin_queue': None,
+              'user': getuser(),
+              'hosts': ['localhost'],}
 
 class Empty():
     def __init__(self):
@@ -642,7 +646,8 @@ def main():
         load_config()
     logging.debug('executing main function')
     logging.debug('arguments from cli and another locals: %s', locals())
-    hosts = args.hosts.split(global_env['split_hosts'])
+    if args.hosts:
+        global_env['hosts'] = args.hosts.split(global_env['split_hosts'])
     # -r -s shortcuts
     if args.sudo:
         args.function.insert(0, 'sudo')
@@ -663,13 +668,13 @@ def main():
 
     if not global_env['parallel']:
         logging.debug('hosts will be processed one by one')
-        for host in hosts:
+        for host in global_env['hosts']:
             logging.debug('host %s, functions %s', host, functions_to_execute)
             run_tasks_on_host(host, functions_to_execute)
     else:
         threads = []
         logging.debug('hosts will be processed in parallel')
-        for host in hosts:
+        for host in global_env['hosts']:
             logging.debug('host %s, functions %s', host, functions_to_execute)
             args = (host, functions_to_execute)
             kwargs = {}
@@ -701,8 +706,8 @@ def parse_cli():
     )
     parser.add_argument(
         '--host', dest='hosts',
-        nargs='?', default='localhost',
-        help='conectin strings like user%shost%sport' % (
+        nargs='?',
+        help='connection strings like user%shost%sport' % (
             global_env['split_user'], global_env['split_port']
         )
     )
@@ -971,7 +976,7 @@ class set_connect_env():
                 global_env['split_user']
             )
         else:
-            connect_env.user = getuser()
+            connect_env.user = global_env['user']
         if global_env['split_port'] in connect_string:
             connect_env.host, connect_env.port = connect_string.split(
                 global_env['split_port']
