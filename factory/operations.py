@@ -65,7 +65,10 @@ def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=Fa
         logger.debug('command: %s', command)
 
     # logging
-    logger.info('in: %s', command)
+    try:
+        logger.info('in: %s', unicode(command, "UTF-8"))
+    except TypeError:
+        logger.info('in: %s', command)
 
     stderr = PIPE
     if err_to_out:
@@ -159,7 +162,10 @@ def out_loop(p, logger):
             return ''
         if sout:
             sumout += sout
-            logger.info('out: %s', unicode(sout, "UTF-8"))
+            try:
+                logger.info('out: %s', unicode(sout, "UTF-8"))
+            except TypeError:
+                logger.info('out: %s', sout)
             #TODO: y\n; password
     logger.debug('return sumout %s', sumout)
     return sumout
@@ -192,7 +198,10 @@ def err_loop(p, logger):
             return ''
         if serr:
             sumerr += serr
-            logger.info('err: %s', unicode(serr, "UTF-8"))
+            try:
+                logger.info('err: %s', unicode(serr, "UTF-8"))
+            except TypeError:
+                logger.info('err: %s', serr)
     logger.debug('return sumerr %s', sumerr)
     return sumerr
 

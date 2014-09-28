@@ -95,9 +95,9 @@ class TestArgParsing:
         sys.argv = ['factory.py', "-nr", "echo 'hello world!'"]
         factory.main.main()
         out, err = capsys.readouterr()
-        assert out == '' and err == ''
+        assert out == ''
         with open('factory.log', 'r') as f:
-            assert "hello world!" in f.readlines()[-1]
+            assert "hello world!" in f.readlines()[-2]
 
     def test_should_parallel_executing(self, capsys):
         sys.argv = ['factory.py', '-p', "run", "sleep 1; echo -n 'world!'", "run", "echo -n 'hello'"]
@@ -121,13 +121,12 @@ class TestFeedback:
         assert "/bin/sh: 1: qwertyuiop: not found" in out
 
     def test_should_communicate_with_stdin(self, capsys):
-        sys.argv = ['factory.py', "sh"]
-        #oin = sys.stdin
-        #sys.stdin = StringIO.StringIO("echo 'hello world!'; exit")
-        #factory.main.main()
-        #sys.stdin = oin
-        out, err = capsys.readouterr()
-        assert "hello world!" in out
+        from subprocess import Popen, PIPE
+        p = Popen('./factory/main.py \'echo "hello world!"\'',
+            stdout=PIPE, stderr=PIPE, shell=True
+        )
+        out, err = p.communicate()
+        assert "out: hello world!" in out
 
     def test_should_write_logs(self):
         sys.argv = ['factory.py', "run", "echo 'hello world!'"]
@@ -139,17 +138,15 @@ class TestFeedback:
         sys.argv = ['factory.py', "-n", "run", "echo 'hello world!'"]
         factory.main.main()
         out, err = capsys.readouterr()
-        assert out == '' and err == ''
-        with open('factory.logc', 'r') as f:
+        assert out == ''
+        with open('factory.log', 'r') as f:
             assert "hello world!" in f.readlines()[-2]
 
     def test_should_work_with_unicode(self, capsys):
-        sys.argv = ['factory.py', "run:echo 'привет, мир!'"]
+        sys.argv = ['factory.py', "echo 'привет, мир!'"]
         factory.main.main()
         out, err = capsys.readouterr()
-        print out, err
-        assert "привет, мир!" in out
-        assert err == ''
+        assert u"out: привет, мир!" in out
 
     def test_should_write_command_stderr_to_sys_stdout(self, capsys):
         sys.argv = ['factory.py', 'run:qwertyuiop,err_to_out=True']

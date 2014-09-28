@@ -155,12 +155,12 @@ def parse_cli():
         help='execute sudo() with given arguments'
     )
     parser.add_argument(
-        '-n, --non-interactive', dest='non_interactive',
+        '-n', '--non-interactive', dest='non_interactive',
         action='store_true', default=False,
         help='execution without interactive cli'
     )
     parser.add_argument(
-        '-p, --parallel', dest='parallel',
+        '-p', '--parallel', dest='parallel',
         action='store_true', default=False,
         help='parallel execution with or without interactive cli'
     )
