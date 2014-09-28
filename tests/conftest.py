@@ -12,7 +12,9 @@ __email__ = "filipp.s.frizzy@gmail.com"
 __status__ = "Development"
 
 
+import json
 import pytest
+import subprocess
 
 @pytest.fixture()
 def a(tmpdir):
@@ -31,5 +33,5 @@ def b(tmpdir):
 def config(tmpdir):
     config = tmpdir.join('factory.json')
     with open(str(config), 'w') as f:
-        f.write("{'split_function': ';'}\n")
+        f.write(json.dumps({'split_function': '::'}))
     return str(config)

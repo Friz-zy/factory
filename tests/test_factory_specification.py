@@ -16,37 +16,43 @@ import sys
 import imp
 import StringIO
 import pytest
-factory = imp.load_source(
-    'factory',
-    os.path.join(
-        os.path.dirname(os.path.realpath(__file__)),
-        '../factory.py'
-        )
-)
 
+path_to_factory = os.path.abspath(os.path.join(
+                   os.path.dirname(os.path.realpath(__file__)),
+                   '..'))
+sys.path.append(path_to_factory)
+
+import factory
 
 class TestAPI:
+    def test_should_import_api(self):
+        try:
+            from factory.api import *
+            from factory import main as fact
+        except ImportError as e:
+            raise e
+
     def test_should_execute_run_function(self, capsys):
         sys.argv = ['factory.py', "-r", "echo 'hello world!'"]
-        factory.main()
+        factory.main.main()
         out, err = capsys.readouterr()
         assert "hello world!" in out
 
     def test_should_execute_sudo_function(self, capsys):
         sys.argv = ['factory.py', "-s", "echo 'hello world!'"]
-        factory.main()
+        factory.main.main()
         out, err = capsys.readouterr()
         assert "hello world!" in out
 
     def test_should_execute_push_function(self, tmpdir, a, b, capsys):
         sys.argv = ['factory.py', "push", a, b]
-        factory.main()
+        factory.main.main()
         with open(a, 'r') as a, open(b, 'r') as b:
             assert a.read() == b.read()
 
     def test_should_execute_pull_function(self, tmpdir, a, b, capsys):
         sys.argv = ['factory.py', "pull", a, b]
-        factory.main()
+        factory.main.main()
         with open(a, 'r') as a, open(b, 'r') as b:
             assert a.read() == b.read()
 
@@ -54,20 +60,20 @@ class TestAPI:
         sys.argv = ['factory.py', "run_script", a]
         with open(a, 'w') as a:
             a.write('echo "hello world!"')
-        factory.main()
+        factory.main.main()
         out, err = capsys.readouterr()
         print out, err
         assert "hello world!" in out
 
     def test_should_execute_run_function_with_input(self, capsys):
         sys.argv = ['factory.py', "-r", "python -c 'print(raw_input())'", "input='hello, world!'"]
-        factory.main()
+        factory.main.main()
         out, err = capsys.readouterr()
         assert "hello, world!" in out
 
     def test_should_execute_open_shell_function(self, capsys):
         sys.argv = ['factory.py', "open_shell", 'hello, world!', "python -c 'print(raw_input())'"]
-        factory.main()
+        factory.main.main()
         out, err = capsys.readouterr()
         assert "hello, world!" in out
 
@@ -75,19 +81,19 @@ class TestAPI:
 class TestArgParsing:
     def test_should_parse_splited_arguments(self, capsys):
         sys.argv = ['factory.py', "run", "echo 'hello world!'"]
-        factory.main()
+        factory.main.main()
         out, err = capsys.readouterr()
         assert "hello world!" in out
 
     def test_should_execute_many_functions(self, capsys):
         sys.argv = ['factory.py', "run", "echo 'hello world!'", "run", "echo 'hello world!'"]
-        factory.main()
+        factory.main.main()
         out, err = capsys.readouterr()
         assert out.count('hello world!') == 4
 
     def test_should_parse_many_arguments(self, capsys):
         sys.argv = ['factory.py', "-nr", "echo 'hello world!'"]
-        factory.main()
+        factory.main.main()
         out, err = capsys.readouterr()
         assert out == '' and err == ''
         with open('factory.log', 'r') as f:
@@ -95,7 +101,7 @@ class TestArgParsing:
 
     def test_should_parallel_executing(self, capsys):
         sys.argv = ['factory.py', '-p', "run", "sleep 1; echo -n 'world!'", "run", "echo -n 'hello'"]
-        factory.main()
+        factory.main.main()
         out, err = capsys.readouterr()
         print out
         assert out.rfind('hello') < out.rfind('world!')
@@ -104,13 +110,13 @@ class TestArgParsing:
 class TestFeedback:
     def test_should_write_command_stdout_to_sys_stdout(self, capsys):
         sys.argv = ['factory.py', "run:echo 'hello world!'"]
-        factory.main()
+        factory.main.main()
         out, err = capsys.readouterr()
         assert "hello world!" in out
 
     def test_should_write_command_stderr_to_sys_stdout(self, capsys):
         sys.argv = ['factory.py', 'run:qwertyuiop']
-        factory.main()
+        factory.main.main()
         out, err = capsys.readouterr()
         assert "/bin/sh: 1: qwertyuiop: not found" in out
 
@@ -118,20 +124,20 @@ class TestFeedback:
         sys.argv = ['factory.py', "sh"]
         #oin = sys.stdin
         #sys.stdin = StringIO.StringIO("echo 'hello world!'; exit")
-        #factory.main()
+        #factory.main.main()
         #sys.stdin = oin
         out, err = capsys.readouterr()
         assert "hello world!" in out
 
     def test_should_write_logs(self):
         sys.argv = ['factory.py', "run", "echo 'hello world!'"]
-        factory.main()
+        factory.main.main()
         with open('factory.log', 'r') as f:
             assert "hello world!" in f.readlines()[-2]
 
     def test_should_only_write_logs(self, capsys):
         sys.argv = ['factory.py', "-n", "run", "echo 'hello world!'"]
-        factory.main()
+        factory.main.main()
         out, err = capsys.readouterr()
         assert out == '' and err == ''
         with open('factory.logc', 'r') as f:
@@ -139,7 +145,7 @@ class TestFeedback:
 
     def test_should_work_with_unicode(self, capsys):
         sys.argv = ['factory.py', "run:echo 'привет, мир!'"]
-        factory.main()
+        factory.main.main()
         out, err = capsys.readouterr()
         print out, err
         assert "привет, мир!" in out
@@ -147,14 +153,15 @@ class TestFeedback:
 
     def test_should_write_command_stderr_to_sys_stdout(self, capsys):
         sys.argv = ['factory.py', 'run:qwertyuiop,err_to_out=True']
-        factory.main()
+        factory.main.main()
         out, err = capsys.readouterr()
         assert "/bin/sh: 1: qwertyuiop: not found" in out
 
     def test_should_load_config(self, tmpdir, config, capsys):
-        sys.argv = ['factory.py', '--config', config, "run:echo 'hello world!'"]
-        factory.main()
+        sys.argv = ['factory.py', '--config', config, "run::echo 'hello world!'"]
+        factory.main.main()
         out, err = capsys.readouterr()
+        assert "run::echo 'hello world!'" not in out
         assert "hello world!" in out
 
 
