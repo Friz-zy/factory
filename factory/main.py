@@ -82,7 +82,7 @@ def main():
     logging.debug('executing main function')
     logging.debug('arguments from cli and another locals: %s', locals())
     if args.hosts:
-        global_env['hosts'] = args.hosts.split(global_env['split_hosts'])
+        global_env.hosts = args.hosts.split(global_env.split_hosts)
     # -r -s shortcuts
     if args.sudo:
         args.function.insert(0, 'sudo')
@@ -91,25 +91,25 @@ def main():
 
     # update globals interactive and parallel from cli
     logging.debug('updating globals interactive and parallel from cli')
-    global_env['interactive'] = not args.non_interactive
-    global_env['parallel'] = args.parallel
+    global_env.interactive = not args.non_interactive
+    global_env.parallel = args.parallel
 
     functions_to_execute = parse_functions(args.function)
 
     # start of stdin loop
-    if global_env['interactive']:
+    if global_env.interactive:
         logging.debug('starting global stdin loop')
         sloop = gevent.spawn(stdin_loop)
 
-    if not global_env['parallel']:
+    if not global_env.parallel:
         logging.debug('hosts will be processed one by one')
-        for host in global_env['hosts']:
+        for host in global_env.hosts:
             logging.debug('host %s, functions %s', host, functions_to_execute)
             run_tasks_on_host(host, functions_to_execute)
     else:
         threads = []
         logging.debug('hosts will be processed in parallel')
-        for host in global_env['hosts']:
+        for host in global_env.hosts:
             logging.debug('host %s, functions %s', host, functions_to_execute)
             args = (host, functions_to_execute)
             kwargs = {}
@@ -117,7 +117,7 @@ def main():
         gevent.joinall(threads)
 
     # finish stdin loop
-    if global_env['interactive']:
+    if global_env.interactive:
         logging.debug('finishing global stdin loop')
         sloop.kill()
 
@@ -136,14 +136,14 @@ def parse_cli():
     parser.add_argument(
         'function', nargs='+',
         help='an function with arguments for executing like run%s\'echo "hello, world!"\'' % (
-            global_env['split_function']
+            global_env.split_function
         )
     )
     parser.add_argument(
         '--host', dest='hosts',
         nargs='?',
         help='connection strings like user%shost%sport' % (
-            global_env['split_user'], global_env['split_port']
+            global_env.split_user, global_env.split_port
         )
     )
     parser.add_argument(
@@ -175,8 +175,7 @@ def load_config(config_file=''):
     """Set global variables.
 
     Hardcode:
-      global_env['functions'] = globals()
-      global_env['localhost'] = ['localhost', '127.0.0.1', gethostname(),]
+      global_env['functions'] = operations.__dict__
       global_env['stdin_queue'] = gevent.queue.Queue()
 
     Args:
@@ -226,21 +225,13 @@ def load_config(config_file=''):
         else:
             logging.error("can't determine file format for %s", config_file)
 
+    # load build in operations
     import operations
-    global_env['functions'] = {
-        'push': operations.push,
-        'pull': operations.pull,
-        'put': operations.put,
-        'get': operations.get,
-        'run': operations.run,
-        'sudo': operations.sudo,
-        'local': operations.local,
-        'run_script': operations.run_script,
-        'open_shell': operations.open_shell,
-        'check_is_root': operations.check_is_root,
-    }
+    for key, value in operations.__dict__.iteritems():
+        if hasattr(value, '__call__'):
+            global_env.functions[key] = value
 
-    global_env['stdin_queue'] = gevent.queue.Queue()
+    global_env.stdin_queue = gevent.queue.Queue()
 
     logging.debug('global environment: %s', global_env)
 
@@ -278,8 +269,8 @@ def parse_functions(l_arguments):
 
     # an implicit execution
     logging.debug('checking first argument')
-    zero = l_arguments[0].split(global_env['split_function'])[0]
-    if zero not in global_env['functions'].keys():
+    zero = l_arguments[0].split(global_env.split_function)[0]
+    if zero not in global_env.functions.keys():
         logging.warning('can not find function, executing built-in run')
         l_arguments.insert(0, 'run')
         logging.debug('new arguments %s', l_arguments)
@@ -287,13 +278,13 @@ def parse_functions(l_arguments):
     # step 1: split all to lists of functions with args
     logging.debug('spliting all arguments to lists of functions with args')
     for f in l_arguments:
-        if f in global_env['functions'].keys():
+        if f in global_env.functions.keys():
             functions.append([f])
-        elif global_env['split_function'] in f:
-            function, args = f.split(global_env['split_function'])
-            if function in global_env['functions'].keys():
+        elif global_env.split_function in f:
+            function, args = f.split(global_env.split_function)
+            if function in global_env.functions.keys():
                 functions.append([function])
-                functions[-1].extend(args.split(global_env['split_args']))
+                functions[-1].extend(args.split(global_env.split_args))
             else:
                 functions[-1].append(f)
         else:
@@ -308,7 +299,7 @@ def parse_functions(l_arguments):
         kwargs = {}
         for a in args[::-1]:
             e = a.find('=')
-            if e != (-1 or 0) and a[e-1] not in global_env['arithmetic_symbols']:
+            if e != (-1 or 0) and a[e-1] not in global_env.arithmetic_symbols:
                 k, v = a.split('=')
                 k = k.strip()
                 v = v.strip()
@@ -339,15 +330,15 @@ def run_tasks_on_host(connect_string, tasks, con_args=''):
     from context_managers import set_connect_env
     with set_connect_env(connect_string, con_args):
         #TODO: checking first connection via ssh
-        if global_env['parallel']:
+        if global_env.parallel:
             gevent.sleep(0)
             logging.debug('tasks will be processed in parallel')
-            threads = [gevent.spawn(global_env['functions'][function], *args, **kwargs) for function, args, kwargs in tasks]
+            threads = [gevent.spawn(global_env.functions[function], *args, **kwargs) for function, args, kwargs in tasks]
             gevent.joinall(threads)
         else:
             logging.debug('tasks will be processed one by one')
             for function, args, kwargs in tasks:
-                global_env['functions'][function](*args, **kwargs)
+                global_env.functions[function](*args, **kwargs)
 
 
 
@@ -362,7 +353,7 @@ def stdin_loop():
             break
         l = sys.stdin.readline()
         logging.debug('message from sys.stdin: %s', l)
-        global_env['stdin_queue'].put_nowait(l)
+        global_env.stdin_queue.put_nowait(l)
 
 if __name__ == '__main__':
     main()

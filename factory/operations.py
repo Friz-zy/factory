@@ -33,8 +33,8 @@ def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=Fa
 
     """
     logger = connect_env.logger
-    interactive = global_env['interactive']
-    parallel = global_env['parallel']
+    interactive = global_env.interactive
+    parallel = global_env.parallel
     host_string = ''.join((connect_env.user,
                            '@',
                            connect_env.host))
@@ -75,13 +75,13 @@ def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=Fa
         stderr = STDOUT
     logger.debug('stderr: %s', stderr)
     # open new connect
-    if connect_env.host in global_env['localhost']:
+    if connect_env.host in global_env.localhost:
         logger.debug('executing command %s with shell=True', command)
         p = Popen(command, stdout=PIPE, stderr=stderr, stdin=PIPE, shell=True)
     else:
         scommand = [
-            global_env['ssh_binary'],
-            global_env['ssh_port_option'],
+            global_env.ssh_binary,
+            global_env.ssh_port_option,
             str(connect_env.port),
             host_string,
             connect_env.con_args,
@@ -222,8 +222,8 @@ def in_loop(p, logger):
     logger.debug('arguments for executing and another locals: %s', locals())
     while p.poll() is None:
         logger.debug('new iteration of reading global messaging queue')
-        if global_env['stdin_queue'].qsize() > lin:
-            queue = global_env['stdin_queue'].copy()
+        if global_env.stdin_queue.qsize() > lin:
+            queue = global_env.stdin_queue.copy()
             qs = queue.qsize()
             logger.debug('local queue %s with len %s', queue, qs)
             for i, l in enumerate(queue):
@@ -330,7 +330,7 @@ def push(src, dst='~/', pull=False):
                            connect_env.host))
     logger.debug('executing push function')
     logger.debug('arguments for executing and another locals: %s', locals())
-    if connect_env.host in global_env['localhost']:
+    if connect_env.host in global_env.localhost:
         logger.debug('used shutil.copy*')
         if os.path.exists(src):
             logger.debug('os.path.exists(src) is True')
@@ -362,8 +362,8 @@ def push(src, dst='~/', pull=False):
         else:
             command = '-r' + src + ' ' + host_string + ':' + dst
         command = [
-            global_env['scp_binary'],
-            global_env['scp_port_option'],
+            global_env.scp_binary,
+            global_env.scp_port_option,
             str(connect_env.port),
             connect_env.con_args,
             command
@@ -452,10 +452,10 @@ def run_script(local_file, binary=None, freturn=False, err_to_out=False, input=N
 
     command = binary + " < " + local_file
 
-    if not connect_env.host in global_env['localhost']:
+    if not connect_env.host in global_env.localhost:
         command = ''.join((
-            global_env['ssh_binary'],
-            global_env['ssh_port_option'],
+            global_env.ssh_binary,
+            global_env.ssh_port_option,
             str(connect_env.port),
             host_string,
             connect_env.con_args,

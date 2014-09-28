@@ -56,28 +56,28 @@ class set_connect_env():
         connect_string = self.cs
         con_args = self.ca
         connect_env.connect_string = connect_string
-        if global_env['split_user'] in connect_string:
+        if global_env.split_user in connect_string:
             connect_env.user, connect_string = connect_string.split(
-                global_env['split_user']
+                global_env.split_user
             )
         else:
-            connect_env.user = global_env['user']
-        if global_env['split_port'] in connect_string:
+            connect_env.user = global_env.user
+        if global_env.split_port in connect_string:
             connect_env.host, connect_env.port = connect_string.split(
-                global_env['split_port']
+                global_env.split_port
             )
         else:
             connect_env.host = connect_string
-            connect_env.port = global_env['ssh_port']
+            connect_env.port = global_env.ssh_port
         connect_env.con_args = con_args
         connect_env.logger = logging.getLogger(
             ''.join((connect_env.user,
-                global_env['split_user'],
+                global_env.split_user,
                 connect_env.host
             ))
         )
         # add logging to interactive output
-        if global_env['interactive']:
+        if global_env.interactive:
             logging.debug('adding logging to interactive output')
             # only info for stdout
             info = logging.StreamHandler(sys.stdout)
