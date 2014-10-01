@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # coding=utf-8
-"""
+"""Global config settings.
 
 Attributes:
   global_env (Empty class object): global class instance for global options
@@ -34,6 +34,9 @@ Attributes:
     check_is_root (bool): True if connected as root, else False
 
 """
+
+# This file is part of https://github.com/Friz-zy/factory
+
 from socket import gethostname
 from getpass import getuser
 

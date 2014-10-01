@@ -9,8 +9,8 @@ It is proof-of-concept realization of [fabric](https://github.com/fabric/fabric)
 * Factory uses [gevent](https://github.com/surfly/gevent) library for asynchronous executing
 
 Example:
-  $ ./factory.py 'echo "hello, world!"'
-  $ ./factory.py --host user@host:port run:'uname -a'
+  $ main.py 'echo "hello, world!"'
+  $ main.py --host user@host:port run:'uname -a'
 
 """
 """

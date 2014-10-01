@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # coding=utf-8
-"""
-"""
+"""Context managers for use with the python 'with' statement."""
+
+# This file is part of https://github.com/Friz-zy/factory
+
 import sys
 from main import logging, global_env, connect_env
 

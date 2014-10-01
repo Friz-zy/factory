@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # coding=utf-8
-"""
-"""
+"""Functions for execution like run('echo "hello, world!"')."""
+
+# This file is part of https://github.com/Friz-zy/factory
+
 from __future__ import with_statement
 
 import os
