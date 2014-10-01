@@ -11,17 +11,8 @@ __maintainer__ = "Filipp Frizzy"
 __email__ = "filipp.s.frizzy@gmail.com"
 __status__ = "Development"
 
-import os
 import sys
-import imp
-import StringIO
 import pytest
-
-path_to_factory = os.path.abspath(os.path.join(
-                   os.path.dirname(os.path.realpath(__file__)),
-                   '..'))
-sys.path.append(path_to_factory)
-
 import factory
 
 class TestAPI:
@@ -103,8 +94,19 @@ class TestArgParsing:
         sys.argv = ['factory.py', '-p', "run", "sleep 1; echo -n 'world!'", "run", "echo -n 'hello'"]
         factory.main.main()
         out, err = capsys.readouterr()
-        print out
         assert out.rfind('hello') < out.rfind('world!')
+
+    def test_should_execute_factfile(self, tmpdir, factfile, capsys):
+        sys.argv = ['factory.py', '--facts', factfile]
+        factory.main.main()
+        out, err = capsys.readouterr()
+        assert "hello world!" in out
+
+    def test_should_execute_fabfile(self, tmpdir, fabfile, capsys):
+        sys.argv = ['factory.py', '--fabs', fabfile]
+        factory.main.main()
+        out, err = capsys.readouterr()
+        assert "hello world!" in out
 
 
 class TestFeedback:

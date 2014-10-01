@@ -143,7 +143,7 @@ def parse_cli():
         )
     )
     parser.add_argument(
-        '--host', dest='hosts',
+        '-H, --host', dest='hosts',
         nargs='?',
         help='connection strings like user%shost%sport' % (
             global_env.split_user, global_env.split_port

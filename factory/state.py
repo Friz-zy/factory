@@ -6,7 +6,7 @@ Attributes:
   global_env (Empty class object): global class instance for global options
     interactive (bool): False if --non-interactive given, else True
     parallel (bool): True if --parallel given, else False
-    functions (dict): dict with all functions, default is globals()
+    functions (dict): dict with all functions, default is {}
     localhost (tuple): tuple with all names and ip of localhost, default is ['localhost', '127.0.0.1', socket.gethostname()]
     split_function (str): splitter between function and args, default is ':'
     split_args (str): splitter between args, default is ','
