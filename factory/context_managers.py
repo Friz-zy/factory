@@ -5,11 +5,16 @@
 # This file is part of https://github.com/Friz-zy/factory
 
 import sys
-from main import logging, global_env, connect_env
+from contextlib import contextmanager
+from main import logging
 
-
-class set_connect_env():
+@contextmanager
+def set_connect_env(connect_string, con_args=''):
     """Context manager that set connect_env atributes.
+
+    Args:
+      connect_string (str): [user@]host[:port]
+      con_args (str): options for ssh
 
     Connect_env attibutes:
       connect_string (str): [user@]host[:port]
@@ -19,6 +24,10 @@ class set_connect_env():
       con_args (str): options for ssh
       logger (logging.logger object): logger object for this connect
       check_is_root (bool): True if connected as root, else False
+
+    Returns:
+      connect_env object with most of all atributes
+
 
     Examples:
       >>> load_config()
@@ -33,30 +42,10 @@ class set_connect_env():
       'port': 'port'}
 
     """
-    def __init__(self, connect_string, con_args=''):
-        """Initializing of  set_connect_env class.
-
-        Args:
-          connect_string (str): [user@]host[:port]
-          con_args (str): options for ssh
-
-        """
-        logging.debug('initializing of set_connect_env class')
-        logging.debug('arguments for __init__ and another locals: %s', locals())
-        self.cs = connect_string
-        self.ca = con_args
-
-    def __enter__(self):
-        """Set atributes to connect_env object.
-
-        Returns:
-          connect_env object with most of all atributes
-
-        """
-        logging.debug('set atributes to connect_env object')
-        logging.debug('arguments for __enter__ and another locals: %s', locals())
-        connect_string = self.cs
-        con_args = self.ca
+    logging.debug('initializing of set_connect_env')
+    logging.debug('arguments and another locals: %s', locals())
+    try:
+        from main import global_env, connect_env
         connect_env.connect_string = connect_string
         if global_env.split_user in connect_string:
             connect_env.user, connect_string = connect_string.split(
@@ -94,14 +83,10 @@ class set_connect_env():
         from operations import check_is_root
         connect_env.check_is_root = check_is_root()
         logging.debug('connect_env: %s', connect_env)
-        return connect_env
-
-    def __exit__(self, type, value, traceback):
-        """Reinitialized global connect_env as Empty class.
-
-        FIXME: is it really works?! I doesn't think so...
-
-        """
+        yield connect_env
+    finally:
+        # Reinitialized global connect_env as Empty class.
+        # FIXME: is it really works?! I doesn't think so...
         logging.debug('reinitialization global connect_env as Empty class')
         from state import Empty
         connect_env = Empty()
