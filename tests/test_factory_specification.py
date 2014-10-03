@@ -12,6 +12,7 @@ __email__ = "filipp.s.frizzy@gmail.com"
 __status__ = "Development"
 
 import sys
+import imp
 import pytest
 import factory
 
@@ -67,6 +68,12 @@ class TestAPI:
         factory.main.main()
         out, err = capsys.readouterr()
         assert "hello, world!" in out
+
+    def test_should_execute_factfile_without_fact(self, tmpdir, standalone_factfile, capsys):
+        standalone_factfile = imp.load_source('factfile', standalone_factfile)
+        standalone_factfile.main()
+        out, err = capsys.readouterr()
+        assert "out: hello, world!" in out
 
 
 class TestArgParsing:

@@ -224,19 +224,23 @@ def in_loop(p, logger):
     logger.debug('arguments for executing and another locals: %s', locals())
     while p.poll() is None:
         logger.debug('new iteration of reading global messaging queue')
-        if global_env.stdin_queue.qsize() > lin:
-            queue = global_env.stdin_queue.copy()
-            qs = queue.qsize()
-            logger.debug('local queue %s with len %s', queue, qs)
-            for i, l in enumerate(queue):
-                if i >= lin:
-                    # TODO: crossystem end of line \n \r \nr
-                    logger.debug('flush %s to stdin', l)
-                    p.stdin.write(l)
-                    p.stdin.flush()
-                if queue.qsize() == 0:
-                    break
-            lin = qs
+        try:
+            if global_env.stdin_queue.qsize() > lin:
+                queue = global_env.stdin_queue.copy()
+                qs = queue.qsize()
+                logger.debug('local queue %s with len %s', queue, qs)
+                for i, l in enumerate(queue):
+                    if i >= lin:
+                        # TODO: crossystem end of line \n \r \nr
+                        logger.debug('flush %s to stdin', l)
+                        p.stdin.write(l)
+                        p.stdin.flush()
+                    if queue.qsize() == 0:
+                        break
+                lin = qs
+        except AttributeError:
+            #logger.warning("can't process global stdin", exc_info=True)
+            break
         gevent.sleep(0)
 
 def sudo(command, user='', group='', freturn=False, err_to_out=False, input=None):

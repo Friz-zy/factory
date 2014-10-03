@@ -71,3 +71,26 @@ def hello():
 """
     )
     return str(file)
+
+
+@pytest.fixture()
+def standalone_factfile(tmpdir):
+    file = tmpdir.join('factfile')
+    with open(str(file), 'w') as f:
+        f.write(
+"""#!/usr/bin/env python
+# coding=utf-8
+
+from factory.api import run
+from factory.context_managers import set_connect_env
+
+def main():
+    with set_connect_env('localhost'):
+        run('echo "hello, world!"')
+
+if __name__ == '__main__':
+    main()
+
+"""
+    )
+    return str(file)
