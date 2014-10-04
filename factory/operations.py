@@ -164,6 +164,8 @@ def out_loop(p, logger):
             return ''
         if sout:
             sumout += sout
+            # remove \n because logger sum it too
+            sout = sout.rstrip()
             try:
                 logger.info('out: %s', unicode(sout, "UTF-8"))
             except TypeError:
