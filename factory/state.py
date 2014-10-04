@@ -57,6 +57,12 @@ class Empty():
     def update(self, dict):
         self.__dict__.update(dict)
 
+    def clean(self):
+        self.__dict__ = {}
+
+    def replace(self, dict):
+        self.__dict__ = dict
+
 # default variables
 global_env = Empty(
     {

@@ -46,6 +46,12 @@ def set_connect_env(connect_string, con_args=''):
     logging.debug('arguments and another locals: %s', locals())
     try:
         from main import global_env, connect_env
+        from state import Empty
+
+        # save connect_env that was before
+        old_dict = {}
+        old_dict.update(connect_env.__dict__)
+
         connect_env.connect_string = connect_string
         if global_env.split_user in connect_string:
             connect_env.user, connect_string = connect_string.split(
@@ -83,13 +89,11 @@ def set_connect_env(connect_string, con_args=''):
         from operations import check_is_root
         connect_env.check_is_root = check_is_root()
         logging.debug('connect_env: %s', connect_env)
-        yield connect_env
+        yield
     finally:
         # Reinitialized global connect_env as Empty class.
-        # FIXME: is it really works?! I doesn't think so...
         logging.debug('reinitialization global connect_env as Empty class')
-        from state import Empty
-        connect_env = Empty()
+        connect_env.replace(old_dict)
 
 
 class OnlyOneLevelLogs(object):
