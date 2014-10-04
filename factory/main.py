@@ -45,7 +45,6 @@ import logging
 import argparse
 
 import gevent
-import gevent.queue
 from gevent.socket import wait_read
 from multiprocessing import Process
 from state import global_env, connect_env
@@ -193,7 +192,6 @@ def load_config(config_file=''):
 
     Hardcode:
       global_env['functions'] = operations.__dict__
-      global_env['stdin_queue'] = gevent.queue.Queue()
 
     Args:
       config_file (str): path to config file
@@ -247,8 +245,6 @@ def load_config(config_file=''):
     for key, value in operations.__dict__.iteritems():
         if hasattr(value, '__call__'):
             global_env.functions[key] = value
-
-    global_env.stdin_queue = gevent.queue.Queue()
 
     logging.debug('global environment: %s', global_env)
 

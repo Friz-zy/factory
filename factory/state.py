@@ -20,7 +20,7 @@ Attributes:
     ssh_port_option (str): ssh port option, default is '-p'
     scp_binary (str): path to scp binary, default is 'scp'
     scp_port_option (str): scp port option, default is '-P'
-    stdin_queue (gevent queue object): global queue for sys.stdin messages in interactive mode
+    stdin_queue (gevent queue object): global queue for sys.stdin messages in interactive mode, default is gevent.queue.Queue()
     user (str): username for ssh login, default is current user (via getuser())
     hosts (tuple): tuple with connection strings like user@host:port, default is ['localhost']
 
@@ -37,6 +37,7 @@ Attributes:
 
 # This file is part of https://github.com/Friz-zy/factory
 
+import gevent.queue
 from socket import gethostname
 from getpass import getuser
 
@@ -89,7 +90,7 @@ global_env = Empty(
      'ssh_port_option': '-p',
      'scp_binary': 'scp',
      'scp_port_option': '-P',
-     'stdin_queue': None,
+     'stdin_queue': gevent.queue.Queue(),
      'user': getuser(),
      'hosts': ['localhost'],
      }
