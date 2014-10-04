@@ -15,6 +15,7 @@ import sys
 import imp
 import pytest
 import factory
+import time
 
 class TestAPI:
     def test_should_import_api(self):
@@ -97,11 +98,11 @@ class TestArgParsing:
         with open('factory.log', 'r') as f:
             assert "hello world!" in f.readlines()[-2]
 
-    def test_should_parallel_executing(self, capsys):
+    def test_should_parallel_executing(self, capfd):
         sys.argv = ['factory.py', '-p', "run", "sleep 1; echo -n 'world!'", "run", "echo -n 'hello'"]
         factory.main.main()
-        out, err = capsys.readouterr()
-        assert out.rfind('hello') < out.rfind('world!')
+        out, err = capfd.readouterr()
+        assert out.rfind('out: hello') < out.rfind('out: world!')
 
     def test_should_execute_factfile(self, tmpdir, factfile, capsys):
         sys.argv = ['factory.py', '--facts', factfile]

@@ -47,6 +47,7 @@ import argparse
 import gevent
 import gevent.queue
 from gevent.socket import wait_read
+from multiprocessing import Process
 from state import global_env, connect_env
 
 
@@ -104,21 +105,33 @@ def main():
         logging.debug('starting global stdin loop')
         sloop = gevent.spawn(stdin_loop)
 
-    # parallel mode for hosts is broken
-    #if not global_env.parallel:
-    logging.debug('hosts will be processed one by one')
-    for host in global_env.hosts:
-        logging.debug('host %s, functions %s', host, functions_to_execute)
-        run_tasks_on_host(host, functions_to_execute)
-    #else:
-    #    threads = []
-    #    logging.debug('hosts will be processed in parallel')
-    #    for host in global_env.hosts:
-    #        logging.debug('host %s, functions %s', host, functions_to_execute)
-    #        args = (host, functions_to_execute)
-    #        kwargs = {}
-    #        threads.append(gevent.spawn(run_tasks_on_host, *args, **kwargs))
-    #    gevent.joinall(threads)
+    if not global_env.parallel:
+        logging.debug('hosts will be processed one by one')
+        for host in global_env.hosts:
+            logging.debug('host %s, functions %s', host, functions_to_execute)
+            run_tasks_on_host(host, functions_to_execute)
+    else:
+        processes = []
+        logging.debug('hosts will be processed in parallel')
+
+        for host in global_env.hosts:
+            logging.debug('host %s, functions %s', host, functions_to_execute)
+            # args and kwargs for run_tasks_on_host()
+            args = (host, functions_to_execute)
+            kwargs = {}
+            processes.append(Process(target=run_tasks_on_host, args=args, kwargs=kwargs))
+
+        # start processes
+        for process in processes:
+            process.start()
+
+        # wait for all processes
+        while True:
+            for process in processes:
+                if process.is_alive():
+                    break
+            else:
+                break
 
     # finish stdin loop
     if global_env.interactive:
