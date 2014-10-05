@@ -64,6 +64,10 @@ class Empty():
     def replace(self, dict):
         self.__dict__ = dict
 
+    def __delitem__(self, item):
+        del self.__dict__[item]
+
+
 # default variables
 global_env = Empty(
     {

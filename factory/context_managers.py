@@ -5,8 +5,60 @@
 # This file is part of https://github.com/Friz-zy/factory
 
 import sys
-from contextlib import contextmanager
-from main import logging
+from contextlib import contextmanager, nested
+from main import logging, global_env, connect_env
+from state import Empty
+
+
+@contextmanager
+def set_global_env(*args, **kwargs):
+    """Context manager that set connect_env atributes.
+
+    Args:
+      *args
+      **kwargs
+
+    Returns:
+      global_env object with most of all atributes
+
+    Examples:
+
+    """
+    logging.debug('initializing of set_global_env')
+    logging.debug('arguments and another locals: %s', locals())
+    try:
+        dict={}
+        if args:
+            for a in args:
+                if type(a) is dict:
+                    dict.update(a)
+                elif callable(a):
+                    try:
+                        dict.update(a())
+                    except:
+                        logging.warning()
+                        continue
+                else:
+                    dict[a] = True
+        if kwargs:
+            dict.update(kwargs)
+        clean = dict.pop('clean', True)
+        if clean:
+            old = {}
+            new = []
+            for key in dict.keys():
+                try:
+                    old [key] = global_env[key]
+                except KeyError:
+                    new.append(key)
+        global_env.update(dict)
+        yield global_env
+    finally:
+        logging.debug('reinitialization global connect_env as Empty class')
+        if clean:
+            global_env.update(old)
+            for k in new:
+                del global_env[k]
 
 @contextmanager
 def set_connect_env(connect_string, con_args=''):
@@ -30,7 +82,6 @@ def set_connect_env(connect_string, con_args=''):
 
 
     Examples:
-      >>> load_config()
       >>> with set_connect_env('user@host:port', '') as connect_env:
       ...     connect_env.__dict__ # doctest: +NORMALIZE_WHITESPACE
       {'connect_string': 'user@host:port',
@@ -45,9 +96,6 @@ def set_connect_env(connect_string, con_args=''):
     logging.debug('initializing of set_connect_env')
     logging.debug('arguments and another locals: %s', locals())
     try:
-        from main import global_env, connect_env
-        from state import Empty
-
         # save connect_env that was before
         old_dict = {}
         old_dict.update(connect_env.__dict__)
@@ -89,7 +137,7 @@ def set_connect_env(connect_string, con_args=''):
         from operations import check_is_root
         connect_env.check_is_root = check_is_root()
         logging.debug('connect_env: %s', connect_env)
-        yield
+        yield connect_env
     finally:
         # Reinitialized global connect_env as Empty class.
         logging.debug('reinitialization global connect_env as Empty class')

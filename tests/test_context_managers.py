@@ -12,11 +12,9 @@ __email__ = "filipp.s.frizzy@gmail.com"
 __status__ = "Development"
 
 import pytest
+from factory.api import *
 
 def test_with_set_connect_env():
-    from factory.api import *
-    from factory.context_managers import set_connect_env
-
     assert connect_env.__dict__ == {}
     with set_connect_env('localhost'):
         assert connect_env.host == 'localhost'
@@ -25,3 +23,14 @@ def test_with_set_connect_env():
         assert connect_env.host == 'localhost'
     assert connect_env.__dict__ == {}
 
+
+def test_with_set_global_env():
+    original = global_env.__dict__
+    with set_global_env('test'):
+        assert global_env.test == True
+        with set_global_env(test=False):
+            assert global_env.test == False
+        assert global_env.test == True
+    assert global_env.__dict__ == original
+
+# TODO: check isolation from another global_dict modification: maybe should running task into process
