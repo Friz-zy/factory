@@ -337,7 +337,13 @@ def run_tasks_on_host(connect_string, tasks, global_env, connect_env, con_args='
         if envs.common.parallel:
             gevent.sleep(0)
             logging.debug('tasks will be processed in parallel')
-            threads = [gevent.spawn(run_task, *(function, args, kwargs, copy(envs.common), copy(envs.connect))) for function, args, kwargs in tasks]
+            threads = []
+            for function, args, kwargs in tasks:
+                args = (function, args, kwargs,
+                        copy(envs.common),
+                        copy(envs.connect)
+                )
+                threads.append(gevent.spawn(run_task, *args))
             gevent.joinall(threads)
         else:
             logging.debug('tasks will be processed one by one')
