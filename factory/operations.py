@@ -310,7 +310,10 @@ def check_is_root():
     out, err, status = run('id -u', freturn=True)
     logger.debug('out %s, err %s, status %s', out, err, status)
     if not status:
-        return not int(out)
+        try:
+            return not int(out)
+        except ValueError:
+            return False
     return False
 
 
