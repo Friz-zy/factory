@@ -15,22 +15,22 @@ import pytest
 from factory.api import *
 
 def test_with_set_connect_env():
-    assert connect_env.__dict__ == {}
+    assert envs.connect.__dict__ == {}
     with set_connect_env('localhost'):
-        assert connect_env.host == 'localhost'
+        assert envs.connect.host == 'localhost'
         with set_connect_env('127.0.0.1'):
-            assert connect_env.host == '127.0.0.1'
-        assert connect_env.host == 'localhost'
-    assert connect_env.__dict__ == {}
+            assert envs.connect.host == '127.0.0.1'
+        assert envs.connect.host == 'localhost'
+    assert envs.connect.__dict__ == {}
 
 
 def test_with_set_global_env():
-    original = global_env.__dict__
+    original = envs.common.__dict__
     with set_global_env('test'):
-        assert global_env.test == True
+        assert envs.common.test == True
         with set_global_env(test=False):
-            assert global_env.test == False
-        assert global_env.test == True
-    assert global_env.__dict__ == original
+            assert envs.common.test == False
+        assert envs.common.test == True
+    assert envs.common.__dict__ == original
 
 # TODO: check isolation from another global_dict modification: maybe should running task into process

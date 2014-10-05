@@ -24,7 +24,7 @@ Config files:
       filemode='a',
       level=logging.INFO,
 
-  You can update global_env dict via config file:
+  You can update envs.common dict via config file:
     factory.ini, factory.json or factory.yaml
     or --config PATH cli option
 
@@ -43,11 +43,11 @@ if (major,minor) < (2,5):
 
 import logging
 import argparse
+from copy import copy
 
 import gevent
 from gevent.socket import wait_read
-from multiprocessing import Process
-from state import global_env, connect_env
+from state import envs, stdin_queue
 
 
 logging.basicConfig(
@@ -85,7 +85,7 @@ def main():
     logging.debug('executing main function')
     logging.debug('arguments from cli and another locals: %s', locals())
     if args.hosts:
-        global_env.hosts = args.hosts.split(global_env.split_hosts)
+        envs.common.hosts = args.hosts.split(envs.common.split_hosts)
     # -r -s shortcuts
     if args.sudo:
         args.function.insert(0, 'sudo')
@@ -94,46 +94,35 @@ def main():
 
     # update globals interactive and parallel from cli
     logging.debug('updating globals interactive and parallel from cli')
-    global_env.interactive = not args.non_interactive
-    global_env.parallel = args.parallel
+    envs.common.interactive = not args.non_interactive
+    envs.common.parallel = args.parallel
 
     functions_to_execute = parse_functions(args.function)
 
     # start of stdin loop
-    if global_env.interactive:
+    if envs.common.interactive:
         logging.debug('starting global stdin loop')
         sloop = gevent.spawn(stdin_loop)
 
-    if not global_env.parallel:
+    if not envs.common.parallel:
         logging.debug('hosts will be processed one by one')
-        for host in global_env.hosts:
+        for host in envs.common.hosts:
             logging.debug('host %s, functions %s', host, functions_to_execute)
-            run_tasks_on_host(host, functions_to_execute)
+            run_tasks_on_host(host, functions_to_execute, copy(envs.common), copy(envs.connect))
     else:
-        processes = []
+        threads = []
         logging.debug('hosts will be processed in parallel')
 
-        for host in global_env.hosts:
+        for host in envs.common.hosts:
             logging.debug('host %s, functions %s', host, functions_to_execute)
             # args and kwargs for run_tasks_on_host()
-            args = (host, functions_to_execute)
+            args = (host, functions_to_execute, copy(envs.common), copy(envs.connect))
             kwargs = {}
-            processes.append(Process(target=run_tasks_on_host, args=args, kwargs=kwargs))
-
-        # start processes
-        for process in processes:
-            process.start()
-
-        # wait for all processes
-        while True:
-            for process in processes:
-                if process.is_alive():
-                    break
-            else:
-                break
+            threads.append(gevent.spawn(run_tasks_on_host, *args, **kwargs))
+        gevent.joinall(threads)
 
     # finish stdin loop
-    if global_env.interactive:
+    if envs.common.interactive:
         logging.debug('finishing global stdin loop')
         sloop.kill()
 
@@ -152,14 +141,14 @@ def parse_cli():
     parser.add_argument(
         'function', nargs='+',
         help='an function with arguments for executing like run%s\'echo "hello, world!"\'' % (
-            global_env.split_function
+            envs.common.split_function
         )
     )
     parser.add_argument(
         '-H', '--host', dest='hosts',
         nargs='?',
         help='connection strings like user%shost%sport' % (
-            global_env.split_user, global_env.split_port
+            envs.common.split_user, envs.common.split_port
         )
     )
     parser.add_argument(
@@ -191,7 +180,7 @@ def load_config(config_file=''):
     """Set global variables.
 
     Hardcode:
-      global_env['functions'] = operations.__dict__
+      envs.common['functions'] = operations.__dict__
 
     Args:
       config_file (str): path to config file
@@ -220,21 +209,21 @@ def load_config(config_file=''):
             c = ConfigParser()
             try:
                 c.read(config_file)
-                global_env.update(c.__dict__)
+                envs.common.update(c.__dict__)
             except:
                 logging.error("can't load config from %s", config_file, exc_info=True)
         elif '.json' in config_file:
             try:
                 import json
                 with open(config_file, 'r') as f:
-                    global_env.update(json.load(f))
+                    envs.common.update(json.load(f))
             except:
                 logging.error("can't load config from %s", config_file, exc_info=True)
         elif '.yaml' in config_file:
             try:
                 import yaml
                 with open(config_file, 'r') as f:
-                    global_env.update(yaml.load(f))
+                    envs.common.update(yaml.load(f))
             except:
                 logging.error("can't load config from %s", config_file, exc_info=True)
         else:
@@ -244,9 +233,9 @@ def load_config(config_file=''):
     import operations
     for key, value in operations.__dict__.iteritems():
         if hasattr(value, '__call__'):
-            global_env.functions[key] = value
+            envs.common.functions[key] = value
 
-    logging.debug('global environment: %s', global_env)
+    logging.debug('global environment: %s', envs.common)
 
 
 def parse_functions(l_arguments):
@@ -282,8 +271,8 @@ def parse_functions(l_arguments):
 
     # an implicit execution
     logging.debug('checking first argument')
-    zero = l_arguments[0].split(global_env.split_function)[0]
-    if zero not in global_env.functions.keys():
+    zero = l_arguments[0].split(envs.common.split_function)[0]
+    if zero not in envs.common.functions.keys():
         logging.warning('can not find function, executing built-in run')
         l_arguments.insert(0, 'run')
         logging.debug('new arguments %s', l_arguments)
@@ -291,13 +280,13 @@ def parse_functions(l_arguments):
     # step 1: split all to lists of functions with args
     logging.debug('spliting all arguments to lists of functions with args')
     for f in l_arguments:
-        if f in global_env.functions.keys():
+        if f in envs.common.functions.keys():
             functions.append([f])
-        elif global_env.split_function in f:
-            function, args = f.split(global_env.split_function)
-            if function in global_env.functions.keys():
+        elif envs.common.split_function in f:
+            function, args = f.split(envs.common.split_function)
+            if function in envs.common.functions.keys():
                 functions.append([function])
-                functions[-1].extend(args.split(global_env.split_args))
+                functions[-1].extend(args.split(envs.common.split_args))
             else:
                 functions[-1].append(f)
         else:
@@ -312,7 +301,7 @@ def parse_functions(l_arguments):
         kwargs = {}
         for a in args[::-1]:
             e = a.find('=')
-            if e != (-1 or 0) and a[e-1] not in global_env.arithmetic_symbols:
+            if e != (-1 or 0) and a[e-1] not in envs.common.arithmetic_symbols:
                 k, v = a.split('=')
                 k = k.strip()
                 v = v.strip()
@@ -325,7 +314,7 @@ def parse_functions(l_arguments):
 
     return tasks
 
-def run_tasks_on_host(connect_string, tasks, con_args=''):
+def run_tasks_on_host(connect_string, tasks, global_env, connect_env, con_args=''):
     """Open connect to host and executed tasks.
 
     Use set_connect_env context manager for set connect args.
@@ -338,21 +327,29 @@ def run_tasks_on_host(connect_string, tasks, con_args=''):
       con_args (str): options for ssh
 
     """
+    envs.common = global_env
+    envs.connect = connect_env
     logging.debug('executing run_tasks_on_host function')
     logging.debug('arguments for executing and another locals: %s', locals())
     from context_managers import set_connect_env
     with set_connect_env(connect_string, con_args):
         #TODO: checking first connection via ssh
-        if global_env.parallel:
+        if envs.common.parallel:
             gevent.sleep(0)
             logging.debug('tasks will be processed in parallel')
-            threads = [gevent.spawn(global_env.functions[function], *args, **kwargs) for function, args, kwargs in tasks]
+            threads = [gevent.spawn(run_task, *(function, args, kwargs, copy(envs.common), copy(envs.connect))) for function, args, kwargs in tasks]
             gevent.joinall(threads)
         else:
             logging.debug('tasks will be processed one by one')
             for function, args, kwargs in tasks:
-                global_env.functions[function](*args, **kwargs)
+                run_task(function, args, kwargs, copy(envs.common), copy(envs.connect))
 
+
+
+def run_task(function, args, kwargs, global_env, connect_env):
+    envs.common = global_env
+    envs.connect = connect_env
+    envs.common.functions[function](*args, **kwargs)
 
 
 def stdin_loop():
@@ -366,7 +363,7 @@ def stdin_loop():
             break
         l = sys.stdin.readline()
         logging.debug('message from sys.stdin: %s', l)
-        global_env.stdin_queue.put_nowait(l)
+        stdin_queue.put_nowait(l)
 
 if __name__ == '__main__':
     main()

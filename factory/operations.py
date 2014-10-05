@@ -11,7 +11,7 @@ import sys
 from shutil import copy2, copytree
 import gevent
 from gevent.subprocess import Popen, PIPE, STDOUT
-from main import logging, global_env, connect_env
+from main import logging, envs, stdin_queue
 from context_managers import set_connect_env
 
 def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=False, input=None):
@@ -34,18 +34,18 @@ def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=Fa
         int that mean return code of command
 
     """
-    logger = connect_env.logger
-    interactive = global_env.interactive
-    parallel = global_env.parallel
-    host_string = ''.join((connect_env.user,
+    logger = envs.connect.logger
+    interactive = envs.common.interactive
+    parallel = envs.common.parallel
+    host_string = ''.join((envs.connect.user,
                            '@',
-                           connect_env.host))
+                           envs.connect.host))
     logger.debug('executing run function')
     logger.debug('arguments for executing and another locals: %s', locals())
     # run as root
     logger.debug('case use_sudo')
     if use_sudo:
-        if not connect_env.check_is_root:
+        if not envs.connect.check_is_root:
             if 'sudo' not in command.split():
                 command = " ".join(('sudo', command))
         logger.debug('command: %s', command)
@@ -77,16 +77,16 @@ def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=Fa
         stderr = STDOUT
     logger.debug('stderr: %s', stderr)
     # open new connect
-    if connect_env.host in global_env.localhost:
+    if envs.connect.host in envs.common.localhost:
         logger.debug('executing command %s with shell=True', command)
         p = Popen(command, stdout=PIPE, stderr=stderr, stdin=PIPE, shell=True)
     else:
         scommand = [
-            global_env.ssh_binary,
-            global_env.ssh_port_option,
-            str(connect_env.port),
+            envs.common.ssh_binary,
+            envs.common.ssh_port_option,
+            str(envs.connect.port),
             host_string,
-            connect_env.con_args,
+            envs.connect.con_args,
             command
         ]
         logger.debug('executing command %s', scommand)
@@ -152,7 +152,6 @@ def out_loop(p, logger):
     """
     sout = ' '
     sumout = ''
-    logger = connect_env.logger
     logger.debug('executing out_loop function')
     logger.debug('arguments for executing and another locals: %s', locals())
     while sout or p.poll() is None:
@@ -190,7 +189,6 @@ def err_loop(p, logger):
     """
     serr = ' '
     sumerr = ''
-    logger = connect_env.logger
     logger.debug('executing err_loop function')
     logger.debug('arguments for executing and another locals: %s', locals())
     while serr or p.poll() is None:
@@ -221,14 +219,13 @@ def in_loop(p, logger):
 
     """
     lin = 0
-    logger = connect_env.logger
     logger.debug('executing in_loop function')
     logger.debug('arguments for executing and another locals: %s', locals())
     while p.poll() is None:
         logger.debug('new iteration of reading global messaging queue')
         try:
-            if global_env.stdin_queue.qsize() > lin:
-                queue = global_env.stdin_queue.copy()
+            if stdin_queue.qsize() > lin:
+                queue = stdin_queue.copy()
                 qs = queue.qsize()
                 logger.debug('local queue %s with len %s', queue, qs)
                 for i, l in enumerate(queue):
@@ -264,7 +261,7 @@ def sudo(command, user='', group='', freturn=False, err_to_out=False, input=None
         int that mean return code of command
 
     """
-    logger = connect_env.logger
+    logger = envs.connect.logger
     logger.debug('executing sudo function')
     logger.debug('arguments for executing and another locals: %s', locals())
     return run(command, use_sudo=True, user=user, group=group, freturn=freturn, err_to_out=err_to_out, input=input)
@@ -290,10 +287,10 @@ def local(command, use_sudo=False, user='', group='', freturn=False, err_to_out=
         int that mean return code of command
 
     """
-    logger = connect_env.logger
+    logger = envs.connect.logger
     logger.debug('executing local function')
     logger.debug('arguments for executing and another locals: %s', locals())
-    with set_connect_env('localhost', connect_env.con_args):
+    with set_connect_env('localhost', envs.connect.con_args):
         return run(command, use_sudo=use_sudo, user=user, group=group, freturn=freturn, err_to_out=err_to_out, input=input)
 
 
@@ -304,7 +301,7 @@ def check_is_root():
       bool: True if current user uid is 0, else False
 
     """
-    logger = connect_env.logger
+    logger = envs.connect.logger
     logger.debug('executing check_is_root function')
     logger.debug('arguments for executing and another locals: %s', locals())
     out, err, status = run('id -u', freturn=True)
@@ -335,13 +332,13 @@ def push(src, dst='~/', pull=False):
         status of subprocess with scp
 
     """
-    logger = connect_env.logger
-    host_string = ''.join((connect_env.user,
+    logger = envs.connect.logger
+    host_string = ''.join((envs.connect.user,
                            '@',
-                           connect_env.host))
+                           envs.connect.host))
     logger.debug('executing push function')
     logger.debug('arguments for executing and another locals: %s', locals())
-    if connect_env.host in global_env.localhost:
+    if envs.connect.host in envs.common.localhost:
         logger.debug('used shutil.copy*')
         if os.path.exists(src):
             logger.debug('os.path.exists(src) is True')
@@ -373,10 +370,10 @@ def push(src, dst='~/', pull=False):
         else:
             command = '-r' + src + ' ' + host_string + ':' + dst
         command = [
-            global_env.scp_binary,
-            global_env.scp_port_option,
-            str(connect_env.port),
-            connect_env.con_args,
+            envs.common.scp_binary,
+            envs.common.scp_port_option,
+            str(envs.connect.port),
+            envs.connect.con_args,
             command
         ]
 
@@ -400,7 +397,7 @@ def pull(src, dst='.'):
         status of subprocess with scp
 
     """
-    logger = connect_env.logger
+    logger = envs.connect.logger
     logger.debug('executing pull function')
     logger.debug('arguments for executing and another locals: %s', locals())
     return push(src, dst, True)
@@ -408,7 +405,7 @@ def pull(src, dst='.'):
 
 def get(src, dst='.'):
     """Alias for pull()"""
-    logger = connect_env.logger
+    logger = envs.connect.logger
     logger.debug('executing get function')
     logger.debug('arguments for executing and another locals: %s', locals())
     return pull(src, dst)
@@ -416,7 +413,7 @@ def get(src, dst='.'):
 
 def put(src, dst='~/'):
     """Alias for push"""
-    logger = connect_env.logger
+    logger = envs.connect.logger
     logger.debug('executing put function')
     logger.debug('arguments for executing and another locals: %s', locals())
     return push(src, dst)
@@ -443,10 +440,10 @@ def run_script(local_file, binary=None, freturn=False, err_to_out=False, input=N
         string that contained all stderr
         int that mean return code of command
     """
-    logger = connect_env.logger
-    host_string = ''.join((connect_env.user,
+    logger = envs.connect.logger
+    host_string = ''.join((envs.connect.user,
                            '@',
-                           connect_env.host))
+                           envs.connect.host))
     logger.debug('executing run_script function')
     logger.debug('arguments for executing and another locals: %s', locals())
     if not binary:
@@ -463,13 +460,13 @@ def run_script(local_file, binary=None, freturn=False, err_to_out=False, input=N
 
     command = binary + " < " + local_file
 
-    if not connect_env.host in global_env.localhost:
+    if not envs.connect.host in envs.common.localhost:
         command = ''.join((
-            global_env.ssh_binary,
-            global_env.ssh_port_option,
-            str(connect_env.port),
+            envs.common.ssh_binary,
+            envs.common.ssh_port_option,
+            str(envs.connect.port),
             host_string,
-            connect_env.con_args,
+            envs.connect.con_args,
             command
         ))
 
@@ -488,7 +485,7 @@ def open_shell(command=None, shell='/bin/bash -i'):
     #FIXME: on localhost after each command moves to background
 
     """
-    logger = connect_env.logger
+    logger = envs.connect.logger
     logger.debug('executing open_shell function')
     logger.debug('arguments for executing and another locals: %s', locals())
     run(shell, err_to_out=True, input=command)

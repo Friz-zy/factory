@@ -6,20 +6,20 @@
 
 import sys
 from contextlib import contextmanager, nested
-from main import logging, global_env, connect_env
+from main import logging, envs
 from state import Empty
 
 
 @contextmanager
 def set_global_env(*args, **kwargs):
-    """Context manager that set connect_env atributes.
+    """Context manager that set envs.connect atributes.
 
     Args:
       *args
       **kwargs
 
     Returns:
-      global_env object with most of all atributes
+      envs.common object with most of all atributes
 
     Examples:
 
@@ -48,21 +48,21 @@ def set_global_env(*args, **kwargs):
             new = []
             for key in dict.keys():
                 try:
-                    old [key] = global_env[key]
+                    old [key] = envs.common[key]
                 except KeyError:
                     new.append(key)
-        global_env.update(dict)
-        yield global_env
+        envs.common.update(dict)
+        yield envs.common
     finally:
-        logging.debug('reinitialization global connect_env as Empty class')
+        logging.debug('reinitialization global envs.connect as Empty class')
         if clean:
-            global_env.update(old)
+            envs.common.update(old)
             for k in new:
-                del global_env[k]
+                del envs.common[k]
 
 @contextmanager
 def set_connect_env(connect_string, con_args=''):
-    """Context manager that set connect_env atributes.
+    """Context manager that set envs.connect atributes.
 
     Args:
       connect_string (str): [user@]host[:port]
@@ -78,7 +78,7 @@ def set_connect_env(connect_string, con_args=''):
       check_is_root (bool): True if connected as root, else False
 
     Returns:
-      connect_env object with most of all atributes
+      envs.connect object with most of all atributes
 
 
     Examples:
@@ -96,52 +96,52 @@ def set_connect_env(connect_string, con_args=''):
     logging.debug('initializing of set_connect_env')
     logging.debug('arguments and another locals: %s', locals())
     try:
-        # save connect_env that was before
+        # save envs.connect that was before
         old_dict = {}
-        old_dict.update(connect_env.__dict__)
+        old_dict.update(envs.connect.__dict__)
 
-        connect_env.connect_string = connect_string
-        if global_env.split_user in connect_string:
-            connect_env.user, connect_string = connect_string.split(
-                global_env.split_user
+        envs.connect.connect_string = connect_string
+        if envs.common.split_user in connect_string:
+            envs.connect.user, connect_string = connect_string.split(
+                envs.common.split_user
             )
         else:
-            connect_env.user = global_env.user
-        if global_env.split_port in connect_string:
-            connect_env.host, connect_env.port = connect_string.split(
-                global_env.split_port
+            envs.connect.user = envs.common.user
+        if envs.common.split_port in connect_string:
+            envs.connect.host, envs.connect.port = connect_string.split(
+                envs.common.split_port
             )
         else:
-            connect_env.host = connect_string
-            connect_env.port = global_env.ssh_port
-        connect_env.con_args = con_args
-        connect_env.logger = logging.getLogger(
-            ''.join((connect_env.user,
-                global_env.split_user,
-                connect_env.host
+            envs.connect.host = connect_string
+            envs.connect.port = envs.common.ssh_port
+        envs.connect.con_args = con_args
+        envs.connect.logger = logging.getLogger(
+            ''.join((envs.connect.user,
+                envs.common.split_user,
+                envs.connect.host
             ))
         )
         # add logging to interactive output
-        if global_env.interactive:
+        if envs.common.interactive:
             logging.debug('adding logging to interactive output')
             # only info for stdout
             info = logging.StreamHandler(sys.stdout)
             info.addFilter(OnlyOneLevelLogs(logging.INFO))
             info.setFormatter(logging.Formatter('%(name)s %(message)s'))
-            connect_env.logger.addHandler(info)
+            envs.connect.logger.addHandler(info)
             # all another to stderr
             error = logging.StreamHandler(sys.stderr)
             error.addFilter(WithoutOneLevelLogs(logging.INFO))
             error.setFormatter(logging.Formatter('%(name)s %(message)s'))
-            connect_env.logger.addHandler(error)
+            envs.connect.logger.addHandler(error)
         from operations import check_is_root
-        connect_env.check_is_root = check_is_root()
-        logging.debug('connect_env: %s', connect_env)
-        yield connect_env
+        envs.connect.check_is_root = check_is_root()
+        logging.debug('envs.connect: %s', envs.connect)
+        yield envs.connect
     finally:
-        # Reinitialized global connect_env as Empty class.
-        logging.debug('reinitialization global connect_env as Empty class')
-        connect_env.replace(old_dict)
+        # Reinitialized global envs.connect as Empty class.
+        logging.debug('reinitialization global envs.connect as Empty class')
+        envs.connect.replace(old_dict)
 
 
 class OnlyOneLevelLogs(object):
