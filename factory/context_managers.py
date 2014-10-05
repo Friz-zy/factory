@@ -11,20 +11,50 @@ from state import Empty
 
 
 @contextmanager
-def set_global_env(*args, **kwargs):
-    """Context manager that set envs.connect atributes.
+def set_common_env(*args, **kwargs):
+    """Context manager that set envs.common atributes.
+
+    If one of args will be 'clean' = False, envs.common
+    will be saved in updated state.
+    Else envs.common will be reverted to previous state
+    after 'with' statement.
 
     Args:
-      *args
-      **kwargs
+      *args (tuple):
+        if argument is dict, env.common will be updated by this dict
+        and if argument is function, env.common will be updated by executing this function
+        and if argument is just number, string or object, it will be used as key with value = True
+      **kwargs (dict): env.common will be updated by this dict
 
     Returns:
       envs.common object with most of all atributes
 
     Examples:
+      >>> with set_common_env('test', test1='test1') as common_env:
+      ...     common_env.__dict__ # doctest: +NORMALIZE_WHITESPACE
+      {'test1': 'test1',
+      'functions': {},
+      'ssh_port_option': '-p',
+      'split_user': '@',
+      'split_function': ':',
+      'ssh_port': 22,
+      'scp_binary': 'scp',
+      'user': ...,
+      'arithmetic_symbols': ('=', '!', '>', '<', '+', '-', '*', '/', '%'),
+      'split_port': ':',
+      'scp_port_option': '-P',
+      'hosts': ['localhost'],
+      'default_shell': 'sh',
+      'split_args': ',',
+      'test': True,
+      'ssh_binary': 'ssh',
+      'split_hosts': ',',
+      'parallel': False,
+      'localhost': ['localhost', '127.0.0.1', ...],
+      'interactive': True}
 
     """
-    logging.debug('initializing of set_global_env')
+    logging.debug('initializing of set_common_env')
     logging.debug('arguments and another locals: %s', locals())
     try:
         dict={}
@@ -54,8 +84,8 @@ def set_global_env(*args, **kwargs):
         envs.common.update(dict)
         yield envs.common
     finally:
-        logging.debug('reinitialization global envs.connect as Empty class')
         if clean:
+            logging.debug('reverted global envs.common to previous state')
             envs.common.update(old)
             for k in new:
                 del envs.common[k]
@@ -82,11 +112,15 @@ def set_connect_env(connect_string, con_args=''):
 
 
     Examples:
+      >>> from api import *
       >>> with set_connect_env('user@host:port', '') as connect_env:
       ...     connect_env.__dict__ # doctest: +NORMALIZE_WHITESPACE
-      {'connect_string': 'user@host:port',
+      user@host in: id -u
+      user@host err: Bad port 'port'
+      <BLANKLINE>
+      {'check_is_root': False,
+      'connect_string': 'user@host:port',
       'con_args': '',
-      'check_is_root': False,
       'host': 'host',
       'user': 'user',
       'logger': ...,
