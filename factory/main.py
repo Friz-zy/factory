@@ -25,8 +25,16 @@ Config files:
       level=logging.INFO,
 
   You can update envs.common dict via config file:
-    factory.ini, factory.json or factory.yaml
-    or --config PATH cli option
+    always load if exist: factory.ini or factory.json or factory.yaml
+    and --config PATH cli option
+
+  Load factfile:
+    always load if exist: factfile.py or factfile
+    and --factfile PATH cli option
+
+  Load fabfile:
+    always load if exist: fabfile.py or fabfile
+    and --fabfile PATH cli option
 
 """
 
@@ -41,6 +49,7 @@ if (major,minor) < (2,5):
     print 'Sorry, but factory requires python 2.5 or highest. Bye!'
     sys.exit(2)
 
+import imp
 import logging
 import argparse
 from copy import copy
@@ -77,11 +86,21 @@ except:
 
 
 def main():
+    # load build in operations
+    import operations
+    for key, value in operations.__dict__.iteritems():
+        if callable(value):
+            envs.common.functions[key] = value
+    load_config()
+    load_factfile()
+    load_fabfile()
     args = parse_cli()
     if args.config_file:
         load_config(args.config_file)
-    else:
-        load_config()
+    if args.factfile:
+        load_factfile(args.factfile)
+    if args.fabfile:
+        load_fabfile(args.fabfile)
     logging.debug('executing main function')
     logging.debug('arguments from cli and another locals: %s', locals())
     if args.hosts:
@@ -125,6 +144,124 @@ def main():
     if envs.common.interactive:
         logging.debug('finishing global stdin loop')
         sloop.kill()
+
+
+def load_config(config_file=''):
+    """Set global variables.
+
+    Check config_file path:
+      factory.ini or factory.json or factory.yaml
+      and --config PATH cli option
+
+    Args:
+      config_file (str): path to config file
+
+    """
+    logging.debug('executing load_config function')
+    logging.debug('arguments from cli and another locals: %s', locals())
+
+    # processing config file
+    for filename in (config_file, 'factory.ini', 'factory.json', 'factory.yaml'):
+        if os.path.exists(filename):
+            config_file = filename
+            break
+    logging.debug('config file: %s', config_file)
+    if config_file:
+        if '.ini' in config_file:
+            try:
+                from ConfigParser import ConfigParser
+            except ImportError:
+                from configparser import ConfigParser
+            c = ConfigParser()
+            try:
+                c.read(config_file)
+                envs.common.update(c.__dict__)
+            except:
+                logging.error("can't load config from %s", config_file, exc_info=True)
+        elif '.json' in config_file:
+            try:
+                import json
+                with open(config_file, 'r') as f:
+                    envs.common.update(json.load(f))
+            except:
+                logging.error("can't load config from %s", config_file, exc_info=True)
+        elif '.yaml' in config_file:
+            try:
+                import yaml
+                with open(config_file, 'r') as f:
+                    envs.common.update(yaml.load(f))
+            except:
+                logging.error("can't load config from %s", config_file, exc_info=True)
+        else:
+            logging.error("can't determine file format for %s", config_file)
+
+    logging.debug('global environment: %s', envs.common)
+
+
+def load_factfile(factfile=''):
+    """Load factfile.
+
+    Check factfile path:
+      factfile.py or factfile
+      and --config PATH cli option
+
+    Args:
+      factfile (str): path to factfile
+
+    """
+    logging.debug('executing load_factfile function')
+    logging.debug('arguments from cli and another locals: %s', locals())
+
+    # processing factfile
+    for filename in (factfile, 'factfile.py', 'factfile'):
+        if os.path.exists(filename):
+            factfile = filename
+            break
+    logging.debug('factfile: %s', factfile)
+    if factfile:
+        factfile = imp.load_source('factfile', factfile)
+        for key, value in factfile.__dict__.iteritems():
+            if callable(value):
+                envs.common.functions[key] = value
+
+    logging.debug('global environment: %s', envs.common)
+
+
+def load_fabfile(fabfile=''):
+    """Load fabfile.
+
+    Check fabfile path:
+      fabfile.py or fabfile
+      and --config PATH cli option
+
+    Args:
+      fabfile (str): path to fabfile
+
+    """
+    logging.debug('executing load_fabfile function')
+    logging.debug('arguments from cli and another locals: %s', locals())
+
+    # processing fabfile
+    for filename in (fabfile, 'fabfile.py', 'fabfile'):
+        if os.path.exists(filename):
+            fabfile = filename
+            break
+    logging.debug('fabfile: %s', fabfile)
+    if fabfile:
+        import tempfile
+        with open(fabfile, 'r') as fab:
+            src = fab.read().replace('fabric', 'factory')
+            temp = tempfile.NamedTemporaryFile()
+            temp.write(src)
+            temp.flush()
+            fabfile = imp.load_source('fabfile', temp.name)
+            temp.close()
+        for key, value in fabfile.__dict__.iteritems():
+            if callable(value):
+                envs.common.functions[key] = value
+
+    logging.debug('global environment: %s', envs.common)
+
 
 
 def parse_cli():
@@ -173,69 +310,15 @@ def parse_cli():
         '--config', dest='config_file',
         help='ini, json or yaml config file for updating global environment'
     )
+    parser.add_argument(
+        '--factfile', dest='factfile',
+        help='factfile'
+    )
+    parser.add_argument(
+        '--fabfile', dest='fabfile',
+        help='fabfile'
+    )
     return parser.parse_args()
-
-
-def load_config(config_file=''):
-    """Set global variables.
-
-    Hardcode:
-      envs.common['functions'] = operations.__dict__
-
-    Args:
-      config_file (str): path to config file
-
-    """
-    logging.debug('executing load_config function')
-    logging.debug('arguments from cli and another locals: %s', locals())
-
-    # processing config file
-    if not os.path.exists(config_file):
-        if os.path.exists('factory.ini'):
-            config_file = 'factory.ini'
-        elif os.path.exists('factory.json'):
-            config_file = 'factory.json'
-        elif os.path.exists('factory.yaml'):
-            config_file = 'factory.yaml'
-        else:
-            config_file = ''
-    logging.debug('config file: %s', config_file)
-    if config_file:
-        if '.ini' in config_file:
-            try:
-                from ConfigParser import ConfigParser
-            except ImportError:
-                from configparser import ConfigParser
-            c = ConfigParser()
-            try:
-                c.read(config_file)
-                envs.common.update(c.__dict__)
-            except:
-                logging.error("can't load config from %s", config_file, exc_info=True)
-        elif '.json' in config_file:
-            try:
-                import json
-                with open(config_file, 'r') as f:
-                    envs.common.update(json.load(f))
-            except:
-                logging.error("can't load config from %s", config_file, exc_info=True)
-        elif '.yaml' in config_file:
-            try:
-                import yaml
-                with open(config_file, 'r') as f:
-                    envs.common.update(yaml.load(f))
-            except:
-                logging.error("can't load config from %s", config_file, exc_info=True)
-        else:
-            logging.error("can't determine file format for %s", config_file)
-
-    # load build in operations
-    import operations
-    for key, value in operations.__dict__.iteritems():
-        if hasattr(value, '__call__'):
-            envs.common.functions[key] = value
-
-    logging.debug('global environment: %s', envs.common)
 
 
 def parse_functions(l_arguments):
@@ -314,20 +397,24 @@ def parse_functions(l_arguments):
 
     return tasks
 
-def run_tasks_on_host(connect_string, tasks, global_env, connect_env, con_args=''):
-    """Open connect to host and executed tasks.
+def run_tasks_on_host(connect_string, tasks, common_env, connect_env, con_args=''):
+    """Set greenlet envs, open connect to host and executed tasks.
 
     Use set_connect_env context manager for set connect args.
-    Then set check_is_root variable.
     And then executed tasks for this host.
+    Hack for greenlets:
+      common_env its copy of envs.common
+      connect_env its copy of envs.connect
 
     Args:
       connect_string (str): [user@]host[:port]
       tasks (list): list of tuples of functions with args and kwargs
+      common_env (Empty class object): global class instance for global options
+      connect_env (Empty class object): global class instance for connect environment
       con_args (str): options for ssh
 
     """
-    envs.common = global_env
+    envs.common = common_env
     envs.connect = connect_env
     logging.debug('executing run_tasks_on_host function')
     logging.debug('arguments for executing and another locals: %s', locals())
@@ -352,8 +439,23 @@ def run_tasks_on_host(connect_string, tasks, global_env, connect_env, con_args='
 
 
 
-def run_task(function, args, kwargs, global_env, connect_env):
-    envs.common = global_env
+def run_task(function, args, kwargs, common_env, connect_env):
+    """Set greenlet envs and run task.
+
+    Hack for greenlets:
+      common_env its copy of envs.common
+      connect_env its copy of envs.connect
+
+    Args:
+      function (str): name of function from envs.common.functions dict
+        that will be executed as task
+      args (tuple): args for executed task
+      kwargs(dict): kwargs for executed task
+      common_env (Empty class object): global class instance for global options
+      connect_env (Empty class object): global class instance for connect environment
+
+    """
+    envs.common = common_env
     envs.connect = connect_env
     envs.common.functions[function](*args, **kwargs)
 

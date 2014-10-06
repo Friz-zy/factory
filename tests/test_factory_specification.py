@@ -105,16 +105,16 @@ class TestArgParsing:
         assert out.rfind('out: hello') < out.rfind('out: world!')
 
     def test_should_execute_factfile(self, tmpdir, factfile, capsys):
-        sys.argv = ['factory.py', '--facts', factfile]
+        sys.argv = ['factory.py', '--factfile', factfile, 'hello_fact']
         factory.main.main()
         out, err = capsys.readouterr()
-        assert "hello world!" in out
+        assert "this if factfile" in out
 
     def test_should_execute_fabfile(self, tmpdir, fabfile, capsys):
-        sys.argv = ['factory.py', '--fabs', fabfile]
+        sys.argv = ['factory.py', '--fabfile', fabfile, 'hello_fab']
         factory.main.main()
         out, err = capsys.readouterr()
-        assert "hello world!" in out
+        assert "this if fabfile" in out
 
 
 class TestFeedback:

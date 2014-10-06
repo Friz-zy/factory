@@ -52,8 +52,8 @@ def factfile(tmpdir):
         f.write(
 """from factory.api import run
 
-def hello():
-    run('echo "hello, world!"')
+def hello_fact():
+    run('echo "this if factfile"')
 """
     )
     return str(file)
@@ -66,8 +66,8 @@ def fabfile(tmpdir):
         f.write(
 """from fabric.api import run
 
-def hello():
-    run('echo "hello, world!"')
+def hello_fab():
+    run('echo "this if fabfile"')
 """
     )
     return str(file)
@@ -81,8 +81,7 @@ def standalone_factfile(tmpdir):
 """#!/usr/bin/env python
 # coding=utf-8
 
-from factory.api import run
-from factory.context_managers import set_connect_env
+from factory.api import run, set_connect_env
 
 def main():
     with set_connect_env('localhost'):

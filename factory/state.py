@@ -4,7 +4,7 @@
 
 Attributes:
   envs (gevent.local local object)
-    global_env (Empty class object): global class instance for global options
+    common (Empty class object): global class instance for global options
       interactive (bool): False if --non-interactive given, else True
       parallel (bool): True if --parallel given, else False
       functions (dict): dict with all functions, default is {}
@@ -24,7 +24,7 @@ Attributes:
       user (str): username for ssh login, default is current user (via getuser())
       hosts (tuple): tuple with connection strings like user@host:port, default is ['localhost']
 
-    connect_env (Empty class object): global class instance for connect environment
+    connect (Empty class object): global class instance for connect environment
       connect_string (str): [user@]host[:port]
       user (str): username for connect, default is getpass.getuser()
       host (str): hostname or ip for connect
