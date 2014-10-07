@@ -86,6 +86,8 @@ except:
 
 
 def main():
+    logging.debug('executing main function')
+    logging.debug('arguments from cli and another locals: %s', locals())
     # load build in operations
     import operations
     for key, value in operations.__dict__.iteritems():
@@ -101,8 +103,6 @@ def main():
         load_factfile(args.factfile)
     if args.fabfile:
         load_fabfile(args.fabfile)
-    logging.debug('executing main function')
-    logging.debug('arguments from cli and another locals: %s', locals())
     if args.hosts:
         envs.common.hosts = args.hosts.split(envs.common.split_hosts)
     # -r -s shortcuts
@@ -117,6 +117,8 @@ def main():
     envs.common.parallel = args.parallel
 
     functions_to_execute = parse_functions(args.function)
+
+    logging.debug('arguments from cli and another locals before real executing of tasks: %s', locals())
 
     # start of stdin loop
     if envs.common.interactive:
