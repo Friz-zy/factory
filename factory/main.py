@@ -285,18 +285,37 @@ def parse_cli():
 
     """
     logging.debug('parsing %s', sys.argv)
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawTextHelpFormatter,
+        prog='fact',
+        description='Tasks executing via ssh and sh',
+    )
     parser.add_argument(
         'function', nargs='+',
-        help='an function with arguments for executing like run%s\'echo "hello, world!"\'' % (
-            envs.common.split_function
+        help="""An function with arguments for executing like:
+  function arg1 arg2
+  function{0}arg1{1}arg2
+  function1 arg1 arg2 function2 arg1 arg2
+  function1{0}arg1{1}arg2 function2{0}arg1{1}arg2
+Examples:
+  'echo "hello world!"'
+  run 'echo "hello world!"'
+  run 'echo "hello world!"' use_sudo=True
+  'run{0}echo "hello world!"{1}use_sudo=True'
+  'run{0}echo "hello world!"' use_sudo=True
+Warning: don't use function arg1{1}arg2 format""".format(
+            envs.common.split_function,
+            envs.common.split_args,
         )
     )
     parser.add_argument(
         '-H', '--host', dest='hosts',
         nargs='?',
-        help='connection strings like user%shost%sport' % (
-            envs.common.split_user, envs.common.split_port
+        help='''connection strings like user%shost%sport
+  default is %s''' % (
+            envs.common.split_user,
+            envs.common.split_port,
+            envs.common.hosts
         )
     )
     parser.add_argument(
@@ -308,7 +327,8 @@ def parse_cli():
         help='execute sudo() with given arguments'
     )
     parser.add_argument(
-        '-n', '--non-interactive', dest='non_interactive',
+        '-n', '--non-interactive',
+        dest='non_interactive',
         action='store_true', default=False,
         help='execution without interactive cli'
     )
@@ -319,28 +339,32 @@ def parse_cli():
     )
     parser.add_argument(
         '--config', dest='config_file',
-        help='ini, json or yaml config file for updating global environment'
+        help='''ini, json or yaml config file
+  for updating global environment'''
     )
     parser.add_argument(
         '--factfile', dest='factfile',
-        help='factfile'
+        help='path to factfile'
     )
     parser.add_argument(
         '--fabfile', dest='fabfile',
-        help='fabfile'
+        help='path to fabfile'
     )
     parser.add_argument(
         '--user', dest='user',
-        help='username for ssh login, default is current user (via getuser())'
+        help='''username for ssh login,
+  default is %s''' % envs.common.user
     )
     parser.add_argument(
         '--port', dest='port',
-        help='ssh port for connections, default is 22'
+        help='''ssh port for connections,
+  default is 22'''
     )
     parser.add_argument(
         '--show-errors', dest='show_errors',
         action='store_true', default=False,
-        help='show factory warnings and errors in interactive mode, default is False'
+        help='''show fact warnings and errors in interactive mode,
+  default is False'''
     )
     return parser.parse_args()
 
@@ -397,6 +421,8 @@ def parse_functions(l_arguments):
             else:
                 functions[-1].append(f)
         else:
+            # NOTE: functions[-1].extend(args.split(envs.common.split_args))
+            # don't uses in this case
             functions[-1].append(f)
     logging.debug('functions %s', functions)
 
