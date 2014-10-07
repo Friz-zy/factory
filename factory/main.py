@@ -105,6 +105,15 @@ def main():
         load_fabfile(args.fabfile)
     if args.hosts:
         envs.common.hosts = args.hosts.split(envs.common.split_hosts)
+    # --user
+    if args.user:
+        envs.common.user = args.user
+    # --port
+    if args.port:
+        envs.common.ssh_port = args.port
+    # --show-errors
+    if args.show_errors:
+        envs.common.show_errors = args.show_errors
     # -r -s shortcuts
     if args.sudo:
         args.function.insert(0, 'sudo')
@@ -319,6 +328,19 @@ def parse_cli():
     parser.add_argument(
         '--fabfile', dest='fabfile',
         help='fabfile'
+    )
+    parser.add_argument(
+        '--user', dest='user',
+        help='username for ssh login, default is current user (via getuser())'
+    )
+    parser.add_argument(
+        '--port', dest='port',
+        help='ssh port for connections, default is 22'
+    )
+    parser.add_argument(
+        '--show-errors', dest='show_errors',
+        action='store_true', default=False,
+        help='show factory warnings and errors in interactive mode, default is False'
     )
     return parser.parse_args()
 

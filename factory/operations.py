@@ -8,6 +8,7 @@ from __future__ import with_statement
 
 import os
 import sys
+from copy import copy
 from shutil import copy2, copytree
 import gevent
 from gevent.subprocess import Popen, PIPE, STDOUT
@@ -106,17 +107,17 @@ def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=Fa
     # processing std loop
     threads = []
     if interactive:
-        args = (p, logger)
+        args = (p, copy(envs.common), copy(envs.connect))
         gin = gevent.spawn(in_loop, *args)
         logger.debug('executing in_loop with args %s', args)
         threads.append(gin)
 
-    args = (p, logger)
+    args = (p, copy(envs.common), copy(envs.connect))
     gout = gevent.spawn(out_loop, *args)
     logger.debug('executing out_loop with args %s', args)
     threads.append(gout)
 
-    args = (p, logger)
+    args = (p, copy(envs.common), copy(envs.connect))
     gerr = gevent.spawn(err_loop, *args)
     logger.debug('executing err_loop with args %s', args)
     threads.append(gerr)
@@ -137,14 +138,19 @@ def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=Fa
     return sumout
 
 
-def out_loop(p, logger):
+def out_loop(p, common_env, connect_env):
     """Loop for command stdout.
 
     Check executing command stdout and put messages to log and sys.stdout.
 
+    Hack for greenlets:
+      common_env its copy of envs.common
+      connect_env its copy of envs.connect
+
     Args:
       p (Popen object): executing command
-      logger (logging.logger object): command logger instance
+      common_env (Empty class object): global class instance for global options
+      connect_env (Empty class object): global class instance for connect environment
 
     Return:
       str: string that contained all stdout messages
@@ -152,6 +158,9 @@ def out_loop(p, logger):
     """
     sout = ' '
     sumout = ''
+    envs.common = common_env
+    envs.connect = connect_env
+    logger = envs.connect.logger
     logger.debug('executing out_loop function')
     logger.debug('arguments for executing and another locals: %s', locals())
     while sout or p.poll() is None:
@@ -174,14 +183,19 @@ def out_loop(p, logger):
     return sumout
 
 
-def err_loop(p, logger):
+def err_loop(p, common_env, connect_env):
     """Loop for command stderr.
 
     Check executing command stderr and put messages to log and sys.stderr.
 
+    Hack for greenlets:
+      common_env its copy of envs.common
+      connect_env its copy of envs.connect
+
     Args:
       p (Popen object): executing command
-      logger (logging.logger object): command logger instance
+      common_env (Empty class object): global class instance for global options
+      connect_env (Empty class object): global class instance for connect environment
 
     Return:
       str: string that contained all stderr messages
@@ -189,6 +203,9 @@ def err_loop(p, logger):
     """
     serr = ' '
     sumerr = ''
+    envs.common = common_env
+    envs.connect = connect_env
+    logger = envs.connect.logger
     logger.debug('executing err_loop function')
     logger.debug('arguments for executing and another locals: %s', locals())
     while serr or p.poll() is None:
@@ -208,17 +225,25 @@ def err_loop(p, logger):
     return sumerr
 
 
-def in_loop(p, logger):
+def in_loop(p, common_env, connect_env):
     """Loop for command stdin.
 
     Check global stdin queue and put lines from it to command stdin.
 
+    Hack for greenlets:
+      common_env its copy of envs.common
+      connect_env its copy of envs.connect
+
     Args:
       p (Popen object): executing command
-      logger (logging.logger object): command logger instance (currently not used)
+      common_env (Empty class object): global class instance for global options
+      connect_env (Empty class object): global class instance for connect environment
 
     """
     lin = 0
+    envs.common = common_env
+    envs.connect = connect_env
+    logger = envs.connect.logger
     logger.debug('executing in_loop function')
     logger.debug('arguments for executing and another locals: %s', locals())
     while p.poll() is None:

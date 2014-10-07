@@ -6,6 +6,7 @@ Attributes:
   envs (gevent.local local object)
     common (Empty class object): global class instance for global options
       interactive (bool): False if --non-interactive given, else True
+      show_errors (bool): show factory warnings and errors in interactive mode, default is False
       parallel (bool): True if --parallel given, else False
       functions (dict): dict with all functions, default is {}
       localhost (tuple): tuple with all names and ip of localhost, default is ['localhost', '127.0.0.1', socket.gethostname()]
@@ -17,7 +18,7 @@ Attributes:
       split_port (str): splitter between host and port, default is ':'
       default_shell (str): default 'sh'
       ssh_binary (str): path to ssh binary, default is 'ssh'
-      ssh_port (int): ssh port for connections, default is '22'
+      ssh_port (int or str): ssh port for connections, default is '22'
       ssh_port_option (str): ssh port option, default is '-p'
       scp_binary (str): path to scp binary, default is 'scp'
       scp_port_option (str): scp port option, default is '-P'
@@ -77,6 +78,7 @@ envs = local()
 envs.common = Empty(
     {
     'interactive': True,
+    'show_errors': False,
     'parallel': False,
     'functions': {},
     'localhost': [

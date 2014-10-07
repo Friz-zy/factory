@@ -119,12 +119,18 @@ class TestArgParsing:
     def test_should_set_username(self, capsys):
         sys.argv = ['factory.py', '--user', 'user', '']
         factory.main.main()
+        # set defaults back
+        from getpass import getuser
+        factory.main.envs.common.user = getuser()
         out, err = capsys.readouterr()
         assert "user@localhost" in out
 
     def test_should_set_ssh_port(self, capsys):
-        sys.argv = ['factory.py', '--port', '111111', '']
+        sys.argv = ['factory.py', '-H', 'test', '--port', '111111', '']
         factory.main.main()
+        # set defaults back
+        factory.main.envs.common.hosts = ['localhost']
+        factory.main.envs.common.ssh_port = 22
         out, err = capsys.readouterr()
         assert "Bad port '111111'" in out
 
@@ -144,10 +150,11 @@ class TestFeedback:
 
     def test_should_communicate_with_stdin(self, capsys):
         from subprocess import Popen, PIPE
-        p = Popen('./factory/main.py \'echo "hello world!"\'',
-            stdout=PIPE, stderr=PIPE, shell=True
+        p = Popen('./factory/main.py ""',
+            stdin=PIPE ,stdout=PIPE, stderr=PIPE, shell=True
         )
-        out, err = p.communicate()
+        out, err = p.communicate('hello world!')
+        print out, err
         assert "out: hello world!" in out
 
     def test_should_write_logs(self):
@@ -179,6 +186,8 @@ class TestFeedback:
     def test_should_load_config(self, tmpdir, config, capsys):
         sys.argv = ['factory.py', '--config', config, "run::echo 'hello world!'"]
         factory.main.main()
+        # set defaults back
+        factory.main.envs.common.split_function = ':'
         out, err = capsys.readouterr()
         assert "run::echo 'hello world!'" not in out
         assert "hello world!" in out

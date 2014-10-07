@@ -198,7 +198,7 @@ class OnlyOneLevelLogs(object):
           record (logging record): record that will be filtered
 
         """
-        return record.levelno == self.level
+        return record.levelno == self.level and envs.common.interactive
 
 
 class WithoutOneLevelLogs(object):
@@ -221,4 +221,4 @@ class WithoutOneLevelLogs(object):
           record (logging record): record that will be filtered
 
         """
-        return record.levelno != self.level
+        return record.levelno != self.level and envs.common.interactive and envs.common.show_errors
