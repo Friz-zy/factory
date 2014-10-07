@@ -116,6 +116,18 @@ class TestArgParsing:
         out, err = capsys.readouterr()
         assert "this if fabfile" in out
 
+    def test_should_set_username(self, capsys):
+        sys.argv = ['factory.py', '--user', 'user', '']
+        factory.main.main()
+        out, err = capsys.readouterr()
+        assert "user@localhost" in out
+
+    def test_should_set_ssh_port(self, capsys):
+        sys.argv = ['factory.py', '--port', '111111', '']
+        factory.main.main()
+        out, err = capsys.readouterr()
+        assert "Bad port '111111'" in out
+
 
 class TestFeedback:
     def test_should_write_command_stdout_to_sys_stdout(self, capsys):
@@ -170,6 +182,12 @@ class TestFeedback:
         out, err = capsys.readouterr()
         assert "run::echo 'hello world!'" not in out
         assert "hello world!" in out
+
+    def test_should_show_errors(self, capsys):
+        sys.argv = ['factory.py', '--show-errors', "run:echo 'hello world!',err_to_out=True"]
+        factory.main.main()
+        out, err = capsys.readouterr()
+        assert "can't process stderr" in err
 
 
 if __name__ == '__main__':
