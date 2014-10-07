@@ -150,11 +150,10 @@ class TestFeedback:
 
     def test_should_communicate_with_stdin(self, capsys):
         from subprocess import Popen, PIPE
-        p = Popen('./factory/main.py ""',
-            stdin=PIPE ,stdout=PIPE, stderr=PIPE, shell=True
+        p = Popen('echo "hello world!" | ./factory/main.py "python -c \'print raw_input()\'"',
+            stdout=PIPE, stderr=PIPE, shell=True
         )
-        out, err = p.communicate('hello world!')
-        print out, err
+        out, err = p.communicate()
         assert "out: hello world!" in out
 
     def test_should_write_logs(self):
