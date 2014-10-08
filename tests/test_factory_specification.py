@@ -40,8 +40,9 @@ class TestAPI:
     def test_should_execute_push_function(self, tmpdir, a, b, capsys):
         sys.argv = ['factory.py', "push", a, b]
         factory.main.main()
-        with open(a, 'r') as a, open(b, 'r') as b:
-            assert a.read() == b.read()
+        with open(a, 'r') as a:
+            with open(b, 'r') as b:
+                assert a.read() == b.read()
 
     def test_should_execute_pull_function(self, tmpdir, a, b, capsys):
         sys.argv = ['factory.py', "pull", a, b]
