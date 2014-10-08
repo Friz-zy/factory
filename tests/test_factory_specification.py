@@ -42,13 +42,14 @@ class TestAPI:
         factory.main.main()
         with open(a, 'r') as a:
             with open(b, 'r') as b:
-                assert a.read() == b.read()
+                assert a.read() == b.read() == 'hello, world!'
 
     def test_should_execute_pull_function(self, tmpdir, a, b, capsys):
         sys.argv = ['factory.py', "pull", a, b]
         factory.main.main()
-        with open(a, 'r') as a, open(b, 'r') as b:
-            assert a.read() == b.read()
+        with open(a, 'r') as a:
+            with open(b, 'r') as b:
+                assert a.read() == b.read() == 'hello, world!'
 
     def test_should_execute_run_script_function(self, tmpdir, a, capsys):
         sys.argv = ['factory.py', "run_script", a]
