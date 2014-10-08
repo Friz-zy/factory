@@ -16,7 +16,7 @@ class PyTest(Command):
 
     def run(self):
         import sys,subprocess
-        errno = subprocess.call(['py.test'])
+        errno = subprocess.call(['py.test', '--cov', 'factory', 'tests'])
         raise SystemExit(errno)
 
 setup(
@@ -31,7 +31,7 @@ url = factory.__url__,
 long_description=open(join(dirname(__file__), 'README.md')).read(),
 packages=find_packages(),
 cmdclass = {'test': PyTest},
-tests_require=['pytest', 'pytest_capturelog'],
+tests_require=['pytest', 'pytest_capturelog', 'pytest-cov'],
 install_requires=['gevent', 'argparse'],
 entry_points={
 'console_scripts': [
