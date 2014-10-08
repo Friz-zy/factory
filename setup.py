@@ -35,7 +35,7 @@ tests_require=['pytest', 'pytest_capturelog'],
 install_requires=['gevent', 'argparse'],
 entry_points={
 'console_scripts': [
-'fact = fabric.main:main',
+'fact = factory.main:main',
 ]
 },
 classifiers=[
