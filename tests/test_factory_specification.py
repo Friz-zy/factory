@@ -152,17 +152,17 @@ class TestFeedback:
 
     def test_should_communicate_with_stdin(self, capsys):
         from subprocess import Popen, PIPE
-        p = Popen('echo "hello world!" | ./factory/main.py "python -c \'print raw_input()\'"',
+        p = Popen('echo "hello world!" | ./factory/main.py -p -H localhost,127.0.0.1 "python -c \'print raw_input()\'"',
             stdout=PIPE, stderr=PIPE, shell=True
         )
         out, err = p.communicate()
-        assert "out: hello world!" in out
+        assert out.find("out: hello world!", (out.find("out: hello world!") + 1)) != -1
 
     def test_should_write_logs(self):
         sys.argv = ['factory.py', "run", "echo 'hello world!'"]
         factory.main.main()
         with open('factory.log', 'r') as f:
-            assert "hello world!" in f.readlines()[-2]
+            assert "out: hello world!" in f.readlines()[-1]
 
     def test_should_only_write_logs(self, capsys):
         sys.argv = ['factory.py', "-n", "run", "echo 'hello world!'"]
@@ -170,7 +170,7 @@ class TestFeedback:
         out, err = capsys.readouterr()
         assert out == ''
         with open('factory.log', 'r') as f:
-            assert "hello world!" in f.readlines()[-2]
+            assert "out: hello world!" in f.readlines()[-1]
 
     def test_should_work_with_unicode(self, capsys):
         sys.argv = ['factory.py', "echo 'привет, мир!'"]
