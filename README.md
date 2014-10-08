@@ -2,6 +2,8 @@ factory
 =======
 [![MIT](http://img.shields.io/badge/License-MIT-green.svg)](https://github.com/Friz-zy/factory/blob/master/LICENSE)  [![Python 2.7](http://img.shields.io/badge/Python-2.5--2.7-yellowgreen.svg)](https://www.python.org/)  [![gevent](http://img.shields.io/badge/Based-Gevent-yellow.svg)](https://pypi.python.org/pypi/gevent/1.0.1)
 
+[![Build Status](https://travis-ci.org/Friz-zy/factory.svg?branch=master)](https://travis-ci.org/Friz-zy/factory) [![Coverage Status](https://img.shields.io/coveralls/Friz-zy/factory.svg)](https://coveralls.io/r/Friz-zy/factory)
+
 Factory is proof-of-concept realization of [fabric](https://github.com/fabric/fabric) with a number of differences:
 * run() function works in the same way with subprocess.popen under localhost as under ssh connect to remote host
 * Factory uses openssh or any another ssh client (you should modified config for this), so you can use all power of ssh sockets
