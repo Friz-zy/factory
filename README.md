@@ -1,6 +1,6 @@
 factory
 =======
-[![MIT](http://img.shields.io/badge/License-MIT-green.svg)](https://github.com/Friz-zy/factory/blob/master/LICENSE) ![Python 2.7](http://img.shields.io/badge/Python-2.5<x<2.7-yellowgreen.svg) [![gevent](http://img.shields.io/badge/Based-Gevent-yellow.svg)](https://pypi.python.org/pypi/gevent/1.0.1)
+[![MIT](http://img.shields.io/badge/License-MIT-green.svg)](https://github.com/Friz-zy/factory/blob/master/LICENSE)  [![Python 2.7](http://img.shields.io/badge/Python-2.5--2.7-yellowgreen.svg)](https://www.python.org/)  [![gevent](http://img.shields.io/badge/Based-Gevent-yellow.svg)](https://pypi.python.org/pypi/gevent/1.0.1)
 
 Factory is proof-of-concept realization of [fabric](https://github.com/fabric/fabric) with a number of differences:
 * run() function works in the same way with subprocess.popen under localhost as under ssh connect to remote host
@@ -27,7 +27,6 @@ from factory.api import run
 
 def hello_fact():
     run('echo "this if factfile"')
-
 ```
 
 ```bash
@@ -36,7 +35,6 @@ frizzy@localhost in: id -u
 frizzy@localhost out: 1000
 frizzy@localhost in: echo "this if factfile"
 frizzy@localhost out: this if factfile
-
 ```
 
 * Using fabfile
@@ -48,7 +46,6 @@ from fabric.api import run
 
 def hello_fab():
     run('echo "this if fabfile"')
-
 ```
 
 ```bash
@@ -57,7 +54,6 @@ frizzy@localhost in: id -u
 frizzy@localhost out: 1000
 frizzy@localhost in: echo "this if fabfile"
 frizzy@localhost out: this if fabfile
-
 ```
 
 * And even this
@@ -77,8 +73,6 @@ if __name__ == '__main__':
         with set_connect_env(host):
             hello()
             run(raw_input('type the command: '))
-
-
 ```
 
 ```bash
@@ -97,11 +91,10 @@ test@127.0.0.1 out: hello world!
 type the command: echo "hello, test"             
 test@127.0.0.1 in: echo "hello, test"
 test@127.0.0.1 out: hello, test
-
 ```
 
-[WiKi](https://github.com/Friz-zy/factory/wiki) will be soon.
+[WiKi](https://github.com/Friz-zy/factory/wiki) will be soon
 
-[Board](https://trello.com/b/TNRr7EbW/factory) on [trello](https://trello.com).
+[Board](https://trello.com/b/TNRr7EbW/factory) on [trello](https://trello.com)
 
 [Filipp Kucheryavy aka Frizzy](mailto:filipp.s.frizzy@gmail.com)
