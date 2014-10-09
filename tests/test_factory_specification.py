@@ -35,6 +35,7 @@ class TestAPI:
         sys.argv = ['factory.py', "-s", "echo 'hello world!'"]
         factory.main.main()
         out, err = capsys.readouterr()
+        assert "sudo echo 'hello world!'" in out
         assert "hello world!" in out
 
     def test_should_execute_push_function(self, tmpdir, a, b, capsys):
