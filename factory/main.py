@@ -116,16 +116,16 @@ def main():
         envs.common.show_errors = args.show_errors
     # -r -s shortcuts
     if args.sudo:
-        args.function.insert(0, 'sudo')
+        args.command.insert(0, 'sudo')
     elif args.run:
-        args.function.insert(0, 'run')
+        args.command.insert(0, 'run')
 
     # update globals interactive and parallel from cli
     logging.debug('updating globals interactive and parallel from cli')
     envs.common.interactive = not args.non_interactive
     envs.common.parallel = args.parallel
 
-    functions_to_execute = parse_functions(args.function)
+    functions_to_execute = parse_functions(args.command)
 
     logging.debug('arguments from cli and another locals before real executing of tasks: %s', locals())
 
@@ -291,19 +291,19 @@ def parse_cli():
         description='Tasks executing via ssh and sh',
     )
     parser.add_argument(
-        'function', nargs='+',
-        help="""An function with arguments for executing like:
-  function arg1 arg2
-  function{0}arg1{1}arg2
-  function1 arg1 arg2 function2 arg1 arg2
-  function1{0}arg1{1}arg2 function2{0}arg1{1}arg2
+        'command', nargs='+',
+        help="""An commands with arguments for executing like:
+  command arg1 arg2
+  command{0}arg1{1}arg2
+  command1 arg1 arg2 command2 arg1 arg2
+  command1{0}arg1{1}arg2 command2{0}arg1{1}arg2
 Examples:
   'echo "hello world!"'
   run 'echo "hello world!"'
   run 'echo "hello world!"' use_sudo=True
   'run{0}echo "hello world!"{1}use_sudo=True'
   'run{0}echo "hello world!"' use_sudo=True
-Warning: don't use function arg1{1}arg2 format""".format(
+Warning: don't use command arg1{1}arg2 format""".format(
             envs.common.split_function,
             envs.common.split_args,
         )
