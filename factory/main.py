@@ -459,8 +459,8 @@ def run_tasks_on_host(connect_string, tasks, common_env, connect_env, con_args='
     Args:
       connect_string (str): [user@]host[:port]
       tasks (list): list of tuples of functions with args and kwargs
-      common_env (Empty class object): global class instance for global options
-      connect_env (Empty class object): global class instance for connect environment
+      common_env (AttributedDict class object): global class instance for global options
+      connect_env (AttributedDict class object): global class instance for connect environment
       con_args (str): options for ssh
 
     """
@@ -501,8 +501,8 @@ def run_task(function, args, kwargs, common_env, connect_env):
         that will be executed as task
       args (tuple): args for executed task
       kwargs(dict): kwargs for executed task
-      common_env (Empty class object): global class instance for global options
-      connect_env (Empty class object): global class instance for connect environment
+      common_env (AttributedDict class object): global class instance for global options
+      connect_env (AttributedDict class object): global class instance for connect environment
 
     """
     envs.common = common_env

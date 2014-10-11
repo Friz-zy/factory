@@ -149,8 +149,8 @@ def out_loop(p, common_env, connect_env):
 
     Args:
       p (Popen object): executing command
-      common_env (Empty class object): global class instance for global options
-      connect_env (Empty class object): global class instance for connect environment
+      common_env (AttributedDict class object): global class instance for global options
+      connect_env (AttributedDict class object): global class instance for connect environment
 
     Return:
       str: string that contained all stdout messages
@@ -194,8 +194,8 @@ def err_loop(p, common_env, connect_env):
 
     Args:
       p (Popen object): executing command
-      common_env (Empty class object): global class instance for global options
-      connect_env (Empty class object): global class instance for connect environment
+      common_env (AttributedDict class object): global class instance for global options
+      connect_env (AttributedDict class object): global class instance for connect environment
 
     Return:
       str: string that contained all stderr messages
@@ -236,8 +236,8 @@ def in_loop(p, common_env, connect_env):
 
     Args:
       p (Popen object): executing command
-      common_env (Empty class object): global class instance for global options
-      connect_env (Empty class object): global class instance for connect environment
+      common_env (AttributedDict class object): global class instance for global options
+      connect_env (AttributedDict class object): global class instance for connect environment
 
     """
     lin = 0

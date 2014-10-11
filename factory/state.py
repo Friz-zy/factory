@@ -4,7 +4,7 @@
 
 Attributes:
   envs (gevent.local local object)
-    common (Empty class object): global class instance for global options
+    common (AttributedDict class object): global class instance for global options
       interactive (bool): False if --non-interactive given, else True
       show_errors (bool): show factory warnings and errors in interactive mode, default is False
       parallel (bool): True if --parallel given, else False
@@ -25,7 +25,7 @@ Attributes:
       user (str): username for ssh login, default is current user (via getuser())
       hosts (tuple): tuple with connection strings like user@host:port, default is ['localhost']
 
-    connect (Empty class object): global class instance for connect environment
+    connect (AttributedDict class object): global class instance for connect environment
       connect_string (str): [user@]host[:port]
       user (str): username for connect, default is getpass.getuser()
       host (str): hostname or ip for connect
@@ -46,7 +46,7 @@ from socket import gethostname
 from getpass import getuser
 
 
-class Empty():
+class AttributedDict(dict):
     def __init__(self, dict={}):
         self.__dict__ = dict
 
@@ -59,6 +59,9 @@ class Empty():
     def __setitem__(self,key,value):
         self.__dict__[key] = value
 
+    def __delitem__(self, item):
+        del self.__dict__[item]
+
     def update(self, dict):
         self.__dict__.update(dict)
 
@@ -68,14 +71,11 @@ class Empty():
     def replace(self, dict):
         self.__dict__ = dict
 
-    def __delitem__(self, item):
-        del self.__dict__[item]
-
 
 # default variables
 envs = local()
 
-envs.common = Empty(
+envs.common = AttributedDict(
     {
     'interactive': True,
     'show_errors': False,
@@ -106,6 +106,6 @@ envs.common = Empty(
      }
 )
 
-envs.connect = Empty()
+envs.connect = AttributedDict()
 
 stdin_queue = gevent.queue.Queue()

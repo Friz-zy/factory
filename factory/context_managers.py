@@ -7,7 +7,7 @@
 import sys
 from contextlib import contextmanager, nested
 from main import logging, envs
-from state import Empty
+from state import AttributedDict
 
 
 @contextmanager
@@ -173,8 +173,8 @@ def set_connect_env(connect_string, con_args=''):
         logging.debug('envs.connect: %s', envs.connect)
         yield envs.connect
     finally:
-        # Reinitialized global envs.connect as Empty class.
-        logging.debug('reinitialization global envs.connect as Empty class')
+        # Reinitialized global envs.connect as AttributedDict class.
+        logging.debug('reinitialization global envs.connect as AttributedDict class')
         envs.connect.replace(old_dict)
 
 
