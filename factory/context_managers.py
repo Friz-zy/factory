@@ -10,6 +10,50 @@ from main import logging, envs
 from state import AttributedDict
 
 
+def hide(*args):
+    """Set envs.common.interactive and/or envs.common.show_errors to False.
+
+    If no one mode is specified, set to False both.
+
+    Args:
+    'stdout' (str): set envs.common.interactive to False
+    'stderr' (str): envs.common.show_errors to False
+
+    """
+    kwargs = {}
+    if args:
+        if 'stdout' in args:
+            kwargs['interactive'] = False
+        if 'stderr' in args:
+            kwargs['show_errors'] = False
+    else:
+        kwargs['interactive'] = False
+        kwargs['show_errors'] = False
+    return set_common_env(**kwargs)
+
+
+def show(*args):
+    """Set envs.common.interactive and/or envs.common.show_errors to True.
+
+    If no one mode is specified, set to True both.
+
+    Args:
+    'stdout' (str): set envs.common.interactive to True
+    'stderr' (str): envs.common.show_errors to True
+
+    """
+    kwargs = {}
+    if args:
+        if 'stdout' in args:
+            kwargs['interactive'] = True
+        if 'stderr' in args:
+            kwargs['show_errors'] = True
+    else:
+        kwargs['interactive'] = True
+        kwargs['show_errors'] = True
+    return set_common_env(**kwargs)
+
+
 @contextmanager
 def set_common_env(*args, **kwargs):
     """Context manager that set envs.common atributes.

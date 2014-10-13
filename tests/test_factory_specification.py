@@ -194,11 +194,13 @@ class TestFeedback:
         assert "run::echo 'hello world!'" not in out
         assert "hello world!" in out
 
-    def test_should_show_errors(self, capsys):
+    def test_should_hide_errors(self, capsys):
         sys.argv = ['factory.py', "run:echo 'hello world!',err_to_out=True"]
         factory.main.main()
         out, err = capsys.readouterr()
         assert "can't process stderr" not in err
+
+    def test_should_show_errors(self, capsys):
         sys.argv = ['factory.py', '--show-errors', "run:echo 'hello world!',err_to_out=True"]
         factory.main.main()
         out, err = capsys.readouterr()
