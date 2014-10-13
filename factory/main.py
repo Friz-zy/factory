@@ -335,7 +335,8 @@ Warning: don't use command arg1{1}arg2 format""".format(
     parser.add_argument(
         '-p', '--parallel', dest='parallel',
         action='store_true', default=False,
-        help='parallel execution with or without interactive cli'
+        help='''parallel execution with or without
+  interactive cli'''
     )
     parser.add_argument(
         '--config', dest='config_file',
@@ -363,8 +364,8 @@ Warning: don't use command arg1{1}arg2 format""".format(
     parser.add_argument(
         '--show-errors', dest='show_errors',
         action='store_true', default=False,
-        help='''show fact warnings and errors in interactive mode,
-  default is False'''
+        help='''show fact warnings and errors in or not in
+  interactive mode, default is False'''
     )
     return parser.parse_args()
 

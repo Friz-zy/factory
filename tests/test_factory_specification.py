@@ -195,10 +195,16 @@ class TestFeedback:
         assert "hello world!" in out
 
     def test_should_show_errors(self, capsys):
+        sys.argv = ['factory.py', "run:echo 'hello world!',err_to_out=True"]
+        factory.main.main()
+        out, err = capsys.readouterr()
+        assert "can't process stderr" not in err
         sys.argv = ['factory.py', '--show-errors', "run:echo 'hello world!',err_to_out=True"]
         factory.main.main()
         out, err = capsys.readouterr()
         assert "can't process stderr" in err
+        # set defaults back
+        factory.main.envs.common.show_errors = False
 
 
 if __name__ == '__main__':

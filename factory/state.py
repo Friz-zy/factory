@@ -6,7 +6,7 @@ Attributes:
   envs (gevent.local local object)
     common (AttributedDict class object): global class instance for global options
       interactive (bool): False if --non-interactive given, else True
-      show_errors (bool): show factory warnings and errors in interactive mode, default is False
+      show_errors (bool): copy factory warnings and errors into stdout (works with and without interactive mode), default is False
       parallel (bool): True if --parallel given, else False
       functions (dict): dict with all functions, default is {}
       localhost (tuple): tuple with all names and ip of localhost, default is ['localhost', '127.0.0.1', socket.gethostname()]
