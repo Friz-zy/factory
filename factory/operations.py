@@ -353,7 +353,7 @@ def push(src, dst='~/', pull=False):
 
     Return:
       int that mean return code of command:
-        exception? 0 : 1 on localhost
+        exception? 0 : errno on localhost
         status of subprocess with scp
 
     """
@@ -373,21 +373,21 @@ def push(src, dst='~/', pull=False):
                     copy2(src, dst)
                     logger.debug('copying is ok, return zero')
                     return 0
-                except:
+                except e:
                     logger.error("can't copy %s to %s", src, dst, info=True)
-                    return 1
+                    return e.errno
             else:
                 logger.debug('os.path.isfile(src) is False, used shutil.copytree')
                 try:
                     copytree(src, dst)
                     logger.debug('copying is ok, return zero')
                     return 0
-                except:
+                except e:
                     logger.error("can't copy %s to %s", src, dst, info=True)
-                    return 1
+                    return e.errno
         else:
             logger.error("%s path does not exists", src)
-            return 1
+            return 2 # errno.ENOENT
     else:
         logger.debug('used factory.run')
         if pull:
