@@ -13,6 +13,7 @@ from state import AttributedDict
 def hide(*args):
     """Set envs.common.interactive and/or envs.common.show_errors to False.
 
+    Alias to show(*args, show=False).
     If no one mode is specified, set to False both.
 
     Args:
@@ -20,19 +21,10 @@ def hide(*args):
     'stderr' (str): envs.common.show_errors to False
 
     """
-    kwargs = {}
-    if args:
-        if 'stdout' in args:
-            kwargs['interactive'] = False
-        if 'stderr' in args:
-            kwargs['show_errors'] = False
-    else:
-        kwargs['interactive'] = False
-        kwargs['show_errors'] = False
-    return set_common_env(**kwargs)
+    return show(*args, show=False)
 
 
-def show(*args):
+def show(*args, **kwargs):
     """Set envs.common.interactive and/or envs.common.show_errors to True.
 
     If no one mode is specified, set to True both.
@@ -40,17 +32,19 @@ def show(*args):
     Args:
     'stdout' (str): set envs.common.interactive to True
     'stderr' (str): envs.common.show_errors to True
+    show (bool): uses as value for options, default is True
 
     """
+    show = kwargs.pop('show', True)
     kwargs = {}
     if args:
         if 'stdout' in args:
-            kwargs['interactive'] = True
+            kwargs['interactive'] = show
         if 'stderr' in args:
-            kwargs['show_errors'] = True
+            kwargs['show_errors'] = show
     else:
-        kwargs['interactive'] = True
-        kwargs['show_errors'] = True
+        kwargs['interactive'] = show
+        kwargs['show_errors'] = show
     return set_common_env(**kwargs)
 
 
