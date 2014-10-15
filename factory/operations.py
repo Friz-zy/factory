@@ -8,6 +8,7 @@ from __future__ import with_statement
 
 import os
 import sys
+from shlex import split
 from copy import copy
 from shutil import copy2, copytree
 import gevent
@@ -87,9 +88,10 @@ def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=Fa
             envs.common.ssh_port_option,
             str(envs.connect.port),
             host_string,
-            envs.connect.con_args,
-            command
         ]
+        scommand += envs.common.ssh_args.split()
+        scommand += envs.connect.con_args.split()
+        scommand += [command]
         logger.debug('executing command %s', scommand)
         p = Popen(scommand, stdout=PIPE, stderr=stderr, stdin=PIPE)
     # flush input
@@ -394,13 +396,15 @@ def push(src, dst='~/', pull=False):
             command = '-r' + host_string + ':' + src + ' ' + dst
         else:
             command = '-r' + src + ' ' + host_string + ':' + dst
-        command = [
+        command = ''.join((
             envs.common.scp_binary,
             envs.common.scp_port_option,
             str(envs.connect.port),
+            host_string,
+            envs.common.scp_args,
             envs.connect.con_args,
             command
-        ]
+        ))
 
         # open new connect
         logger.debug('run command: %s', command)
@@ -491,13 +495,14 @@ def run_script(local_file, binary=None, freturn=False, err_to_out=False, input=N
             envs.common.ssh_port_option,
             str(envs.connect.port),
             host_string,
+            envs.common.ssh_args,
             envs.connect.con_args,
             command
         ))
 
     # open new connect
     logger.debug('run command: %s', command)
-    return local(command=command, freturn=freturn, err_to_out=err_to_out, input=input)
+    return local(command, freturn=freturn, err_to_out=err_to_out, input=input)
 
 
 def open_shell(command=None, shell='/bin/bash -i'):

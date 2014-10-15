@@ -20,8 +20,10 @@ Attributes:
       ssh_binary (str): path to ssh binary, default is 'ssh'
       ssh_port (int or str): ssh port for connections, default is '22'
       ssh_port_option (str): ssh port option, default is '-p'
+      ssh_args (str): ssh additional arguments, default is '-tt'
       scp_binary (str): path to scp binary, default is 'scp'
       scp_port_option (str): scp port option, default is '-P'
+      scp_args (str): scp additional arguments, default is ''
       user (str): username for ssh login, default is current user (via getuser())
       hosts (tuple): tuple with connection strings like user@host:port, default is ['localhost']
 
@@ -99,8 +101,10 @@ envs.common = AttributedDict(
      'ssh_binary': 'ssh',
      'ssh_port': 22,
      'ssh_port_option': '-p',
+     'ssh_args': '-tt',
      'scp_binary': 'scp',
      'scp_port_option': '-P',
+     'scp_args': '',
      'user': getuser(),
      'hosts': ['localhost'],
      }
