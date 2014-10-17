@@ -8,6 +8,7 @@ Attributes:
       interactive (bool): False if --non-interactive given, else True
       show_errors (bool): copy factory warnings and errors into stdout (works with and without interactive mode), default is False
       parallel (bool): True if --parallel given, else False
+      ask_passwd (bool): open secure invite shell for passwords, default is False
       functions (dict): dict with all functions, default is {}
       localhost (tuple): tuple with all names and ip of localhost, default is ['localhost', '127.0.0.1', socket.gethostname()]
       split_function (str): splitter between function and args, default is ':'
@@ -82,6 +83,7 @@ envs.common = AttributedDict(
     'interactive': True,
     'show_errors': False,
     'parallel': False,
+    'ask_passwd': False,
     'functions': {},
     'localhost': [
         'localhost',
