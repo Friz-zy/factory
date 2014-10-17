@@ -8,10 +8,12 @@ from __future__ import with_statement
 
 import os
 import sys
-from shlex import split
 from copy import copy
+from shlex import split
+from getpass import getpass
 from shutil import copy2, copytree
 import gevent
+from gevent.socket import wait_read, timeout
 from gevent.subprocess import Popen, PIPE, STDOUT
 from main import logging, envs, stdin_queue
 from context_managers import set_connect_env
@@ -119,16 +121,17 @@ def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=Fa
     logger.debug('executing out_loop with args %s', args)
     threads.append(gout)
 
-    args = (p, copy(envs.common), copy(envs.connect))
-    gerr = gevent.spawn(err_loop, *args)
-    logger.debug('executing err_loop with args %s', args)
-    threads.append(gerr)
+    if not err_to_out:
+        args = (p, copy(envs.common), copy(envs.connect), True)
+        gerr = gevent.spawn(out_loop, *args)
+        logger.debug('executing err_loop with args %s', args)
+        threads.append(gerr)
 
     gevent.joinall(threads)
     logger.debug('child process has terminated with status %s', p.returncode)
     #TODO: check returncode if returncode==None
     sumout = gout.value
-    sumerr = gerr.value
+    sumerr = gerr.value if not err_to_out else ''
     status = p.returncode
     if p.poll() is None:
         p.terminate()
@@ -140,10 +143,10 @@ def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=Fa
     return sumout
 
 
-def out_loop(p, common_env, connect_env):
-    """Loop for command stdout.
+def out_loop(p, common_env, connect_env, err=False):
+    """Loop for command stdout or stderr.
 
-    Check executing command stdout and put messages to log and sys.stdout.
+    Check executing command stdout or stderr and put messages to log and sys.stdout.
 
     Hack for greenlets:
       common_env its copy of envs.common
@@ -155,76 +158,88 @@ def out_loop(p, common_env, connect_env):
       connect_env (AttributedDict class object): global class instance for connect environment
 
     Return:
-      str: string that contained all stdout messages
+      str: string that contained all stdout or stderr messages
 
     """
-    sout = ' '
+    line = ''
+    char = ' '
     sumout = ''
+    stdout=p.stdout
+    prefix='out: '
+    if err:
+        stdout=p.stderr
+        prefix='err: '
     envs.common = common_env
     envs.connect = connect_env
     logger = envs.connect.logger
     logger.debug('executing out_loop function')
     logger.debug('arguments for executing and another locals: %s', locals())
-    while sout or p.poll() is None:
+    while char or p.poll() is None:
         logger.debug('new iteration of reading stdout')
         try:
-            sout = p.stdout.readline()
+            # wait for 1 second
+            wait_read(stdout.fileno(), 1)
+            # read 1 byte if socket ready
+            char = stdout.read(1)
+        except timeout:
+            if line:
+                # passwords
+                for e in ('[sudo]', 'password', 'Password'):
+                    if e in line and envs.common.ask_passwd:
+                        p.stdin.write(
+                            getpass(
+                                '{}{}{} {}{}\n'.format(
+                                envs.connect.user,
+                                envs.common.split_user,
+                                envs.connect.host,
+                                prefix,
+                                line
+                                )
+                            )
+                        )
+                        p.stdin.write('\n')
+                        p.stdin.flush()
+                        break
+                else:
+                    write_message_to_log(line, prefix)
+                #TODO: y\n
+                line = ''
+            continue
         except AttributeError:
-            logger.error("can't process stdout", exc_info=True)
+            if err:
+                logger.error("can't process stderr", exc_info=True)
+            else:
+                logger.error("can't process stdout", exc_info=True)
             return ''
-        if sout:
-            sumout += sout
+        if char:
+            sumout += char
             # remove \n because logger sum it too
-            sout = sout.rstrip()
-            try:
-                logger.info('out: %s', unicode(sout, "UTF-8"))
-            except TypeError:
-                logger.info('out: %s', sout)
-            #TODO: y\n; password
+            if char not in ('\n', '\r'):
+                line += char
+            elif line:
+                write_message_to_log(line, prefix)
+                line = ''
+        else:
+            if line:
+                write_message_to_log(line, prefix)
+                line = ''
     logger.debug('return sumout %s', sumout)
     return sumout
 
 
-def err_loop(p, common_env, connect_env):
-    """Loop for command stderr.
-
-    Check executing command stderr and put messages to log and sys.stderr.
-
-    Hack for greenlets:
-      common_env its copy of envs.common
-      connect_env its copy of envs.connect
+def write_message_to_log(message='', prefix=''):
+    """Write message to info log.
 
     Args:
-      p (Popen object): executing command
-      common_env (AttributedDict class object): global class instance for global options
-      connect_env (AttributedDict class object): global class instance for connect environment
-
-    Return:
-      str: string that contained all stderr messages
+      message (str): message text
+      prefix (str): text will be displayed before message without space
 
     """
-    serr = ' '
-    sumerr = ''
-    envs.common = common_env
-    envs.connect = connect_env
     logger = envs.connect.logger
-    logger.debug('executing err_loop function')
-    logger.debug('arguments for executing and another locals: %s', locals())
-    while serr or p.poll() is None:
-        logger.debug('new iteration of reading stderr')
-        try:
-            serr = p.stderr.readline()
-        except AttributeError:
-            logger.error("can't process stderr", exc_info=True)
-            return ''
-        if serr:
-            sumerr += serr
-            try:
-                logger.info('err: %s', unicode(serr, "UTF-8"))
-            except TypeError:
-                logger.info('err: %s', serr)
-    logger.debug('return sumerr %s', sumerr)
-    return sumerr
+    try:
+        logger.info('%s%s', prefix, unicode(message, "UTF-8"))
+    except TypeError:
+        logger.info('%s%s', prefix, message)
 
 
 def in_loop(p, common_env, connect_env):
