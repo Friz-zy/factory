@@ -32,11 +32,11 @@ class TestAPI:
         assert "hello world!" in out
 
     def test_should_execute_sudo_function(self, capsys):
-        sys.argv = ['factory.py', "-s", "echo 'hello world!'"]
+        sys.argv = ['factory.py', "-s", "echo 'hello world!'", "input=['\n', '\n', '\n']"]
         factory.main.main()
         out, err = capsys.readouterr()
-        assert "sudo echo 'hello world!'" in out
-        assert "hello world!" in out
+        assert "sudo -S echo 'hello world!'" in out
+        assert "out: hello world!" in out or "err: sudo: 3 " in out
 
     def test_should_execute_push_function(self, tmpdir, a, b, capsys):
         sys.argv = ['factory.py', "push", a, b]

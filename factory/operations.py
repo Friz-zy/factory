@@ -21,6 +21,18 @@ from context_managers import set_connect_env
 def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=False, input=None):
     """Execute command on host via ssh or subprocess.
 
+    TODO: check on windows - maybe it will not work on it
+
+    Factory uses pipes for communication with subprocess.
+    So, there is no way to use popen and automatically write passwords for ssh and sudo on localhost,
+    because "smart" programs like ssh and sudo uses tty directly.
+    Also active tty required (needed check it) and for sudo uses "sudo -S".
+    Alternatives:
+      1) Use paramico like fabric = no ssh sockets.
+      2) Use pty.fork, waitpid, execv as pexcpect and sh = only unix, no separated stderr, hard to communicate.
+      3) Use ssh-copy-id like sh module recommended = ask passwords only one first time.
+      4) Use sshpass like ansible = external dependencies.
+
     Args:
       command (str): command for executing
       use_sudo (bool): running with sudo prefix if True and current user not root, default is False
@@ -28,7 +40,7 @@ def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=Fa
       group (str): group for sudo -g prefix
       freturn (bool): return tuple if True, else return str, default is False
       err_to_out (bool): redirect stderr to stdout if True, default is False
-      input (str): str will be flushed to stdin after executed command, default is None
+      input (str or tuple of str): str will be flushed to stdin after executed command, default is None
 
     Return:
       str if freturn is False: string that contained all stdout messages
@@ -51,13 +63,13 @@ def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=Fa
     if use_sudo:
         if not envs.connect.check_is_root:
             if 'sudo' not in command.split():
-                command = " ".join(('sudo', command))
+                command = " ".join(('sudo -S', command))
         logger.debug('command: %s', command)
     # switching user
     logger.debug('case user')
     if user:
         if 'sudo' not in command.split():
-            command = " ".join(('sudo -u %s -s' % user, command))
+            command = " ".join(('sudo -S -u %s -s' % user, command))
         else:
             command.replace('sudo', 'sudo -u %s' % user)
         logger.debug('command: %s', command)
@@ -65,7 +77,7 @@ def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=Fa
     logger.debug('case group')
     if group:
         if 'sudo' not in command.split():
-            command = " ".join(('sudo -g %s -s' % group, command))
+            command = " ".join(('sudo -S -g %s -s' % group, command))
         else:
             command.replace('sudo', 'sudo -g %s' % group)
         logger.debug('command: %s', command)
@@ -98,12 +110,15 @@ def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=Fa
         p = Popen(scommand, stdout=PIPE, stderr=stderr, stdin=PIPE)
     # flush input
     if input:
-        input = str(input)
-        if input[-1] not in ('\n', '\r'):
-            input += '\n'
-        logger.debug('flushing input %s', input)
-        p.stdin.write(input)
-        p.stdin.flush()
+        if type(input) is str:
+            input = [input]
+        for s in input:
+            s = str(s)
+            if s[-1] not in ('\n', '\r'):
+                s += '\n'
+            logger.debug('flushing input %s', s)
+            p.stdin.write(s)
+            p.stdin.flush()
     # run another command
     if parallel:
         gevent.sleep(0)
@@ -164,6 +179,7 @@ def out_loop(p, common_env, connect_env, err=False):
     line = ''
     char = ' '
     sumout = ''
+    win = os.name == 'nt'
     stdout=p.stdout
     prefix='out: '
     if err:
@@ -177,11 +193,39 @@ def out_loop(p, common_env, connect_env, err=False):
     while char or p.poll() is None:
         logger.debug('new iteration of reading stdout')
         try:
-            # wait for 1 second
-            wait_read(stdout.fileno(), 1)
-            # read 1 byte if socket ready
-            char = stdout.read(1)
-        except timeout:
+            # wait_read doesn't work on windows
+            if win:
+                timer = gevent.Timeout.start_new(0.01)
+                char = stdout.read(1)
+                timer.cancel()
+                ready = True
+            else:
+                wait_read(stdout.fileno(), 0.01)
+                char = stdout.read(1)
+                ready = True
+        except (gevent.Timeout, timeout, OSError):
+            ready = False
+            char = ''
+        except AttributeError:
+            if err:
+                logger.error("can't process stderr", exc_info=True)
+            else:
+                logger.error("can't process stdout", exc_info=True)
+            return ''
+        if ready:
+            if char:
+                sumout += char
+                # remove \n because logger sum it too
+                if char not in ('\n', '\r'):
+                    line += char
+                elif line:
+                    write_message_to_log(line, prefix)
+                    line = ''
+            else:
+                if line:
+                    write_message_to_log(line, prefix)
+                    line = ''
+        else:
             if line:
                 # passwords
                 for e in ('[sudo]', 'password', 'Password'):
@@ -205,24 +249,6 @@ def out_loop(p, common_env, connect_env, err=False):
                 #TODO: y\n
                 line = ''
             continue
-        except AttributeError:
-            if err:
-                logger.error("can't process stderr", exc_info=True)
-            else:
-                logger.error("can't process stdout", exc_info=True)
-            return ''
-        if char:
-            sumout += char
-            # remove \n because logger sum it too
-            if char not in ('\n', '\r'):
-                line += char
-            elif line:
-                write_message_to_log(line, prefix)
-                line = ''
-        else:
-            if line:
-                write_message_to_log(line, prefix)
-                line = ''
     logger.debug('return sumout %s', sumout)
     return sumout
 
