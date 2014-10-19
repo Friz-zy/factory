@@ -203,7 +203,7 @@ def out_loop(p, common_env, connect_env, err=False):
                 wait_read(stdout.fileno(), 0.01)
                 char = stdout.read(1)
                 ready = True
-        except (gevent.Timeout, timeout, OSError):
+        except (gevent.Timeout, timeout):
             ready = False
             char = ''
         except AttributeError:
@@ -309,6 +309,7 @@ def in_loop(p, common_env, connect_env):
             #logger.warning("can't process global stdin", exc_info=True)
             break
         gevent.sleep(0)
+
 
 def sudo(command, user='', group='', freturn=False, err_to_out=False, input=None):
     """sudo is alias for run(use_sudo=True).
