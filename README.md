@@ -14,8 +14,6 @@ Examples:
 * Using build functions
 ```bash
 fact run 'echo "hello, world!"'
-frizzy@localhost in: id -u
-frizzy@localhost out: 1000
 frizzy@localhost in: echo "hello, world!"
 frizzy@localhost out: hello, world!
 ```
@@ -33,8 +31,6 @@ def hello_fact():
 
 ```bash
 fact hello_fact
-frizzy@localhost in: id -u
-frizzy@localhost out: 1000
 frizzy@localhost in: echo "this if factfile"
 frizzy@localhost out: this if factfile
 ```
@@ -52,8 +48,6 @@ def hello_fab():
 
 ```bash
 fact hello_fab
-frizzy@localhost in: id -u
-frizzy@localhost out: 1000
 frizzy@localhost in: echo "this if fabfile"
 frizzy@localhost out: this if fabfile
 ```
@@ -79,15 +73,11 @@ if __name__ == '__main__':
 
 ```bash
 python my_little_script.py 
-frizzy@localhost in: id -u
-frizzy@localhost out: 1000
 frizzy@localhost in: echo "hello world!"
 frizzy@localhost out: hello world!
 type the command: echo "hello, username!"
 frizzy@localhost in: echo "hello, username!"
 frizzy@localhost out: hello, username!
-test@127.0.0.1 in: id -u
-test@127.0.0.1 out: 1000
 test@127.0.0.1 in: echo "hello world!"
 test@127.0.0.1 out: hello world!
 type the command: echo "hello, test"             
