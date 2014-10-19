@@ -4,10 +4,10 @@ factory
 
 [![Build Status](https://travis-ci.org/Friz-zy/factory.svg?branch=master)](https://travis-ci.org/Friz-zy/factory) [![Coverage Status](https://img.shields.io/coveralls/Friz-zy/factory.svg)](https://coveralls.io/r/Friz-zy/factory)
 
-## Description
+#### Description
 Automate your own tasks on pure python and execute it on remote or local hosts
 
-## Long Description
+#### Long Description
 Factory is proof-of-concept realization of [fabric](https://github.com/fabric/fabric) with a number of differences:
 * run() function works in the same way with subprocess.popen under localhost as under ssh connect to remote host
 * Factory uses openssh or any another ssh client (you should modified config for this), so you can use all power of ssh sockets
@@ -18,14 +18,20 @@ Note that Factory uses pipes for communication with subprocess.
 So, there is no way to use popen and automatically write passwords for ssh and sudo on localhost,
 because "smart" programs like ssh and sudo uses tty directly.
 Also active tty required (needed check it) and for sudo uses "sudo -S".
+
 Alternatives:
+
 1) Use paramico like fabric = no ssh sockets.
+
 2) Use pty.fork, waitpid, execv as pexcpect and sh = only unix, no separated stderr, hard to communicate.
+
 3) Use ssh-copy-id like sh module recommended = ask passwords only one first time.
+
 4) Use sshpass like ansible = external dependencies.
+
 Of course, you can write your own run() function with previous decisions and use it!
 
-## Examples:
+#### Examples:
 
 * Using build in functions
 ```bash
@@ -101,9 +107,9 @@ test@127.0.0.1 in: echo "hello, test"
 test@127.0.0.1 out: hello, test
 ```
 
-## [WiKi](https://github.com/Friz-zy/factory/wiki) will be soon
+#### [WiKi](https://github.com/Friz-zy/factory/wiki) will be soon
 
-## [Board](https://trello.com/b/TNRr7EbW/factory) on [trello](https://trello.com)
+#### [Board](https://trello.com/b/TNRr7EbW/factory) on [trello](https://trello.com)
 
-## Contributors
+#### Contributors
 * [Filipp Kucheryavy aka Frizzy](mailto:filipp.s.frizzy@gmail.com)
