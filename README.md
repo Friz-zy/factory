@@ -11,7 +11,7 @@ Factory is proof-of-concept realization of [fabric](https://github.com/fabric/fa
 
 Examples:
 
-* Using build functions
+* Using build in functions
 ```bash
 fact run 'echo "hello, world!"'
 frizzy@localhost in: echo "hello, world!"
