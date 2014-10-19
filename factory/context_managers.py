@@ -207,7 +207,8 @@ def set_connect_env(connect_string, con_args=''):
             error.setFormatter(logging.Formatter('%(name)s %(message)s'))
             envs.connect.logger.addHandler(error)
         from operations import check_is_root
-        envs.connect.check_is_root = check_is_root()
+        with hide('stdout'):
+            envs.connect.check_is_root = check_is_root()
         logging.debug('envs.connect: %s', envs.connect)
         yield envs.connect
     finally:
