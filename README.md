@@ -12,6 +12,7 @@ Factory is proof-of-concept realization of [fabric](https://github.com/fabric/fa
 * run() function works in the same way with subprocess.popen under localhost as under ssh connect to remote host
 * Factory uses openssh or any another ssh client (you should modified config for this), so you can use all power of ssh sockets
 * Factory uses [gevent](https://github.com/surfly/gevent) library for asynchronous executing
+* Factory contains less code and tries to keep everything clear (not perfect, but trying!)
 
 Note that Factory uses pipes for communication with subprocess.
 So, there is no way to use popen and automatically write passwords for ssh and sudo on localhost,
