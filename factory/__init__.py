@@ -46,3 +46,4 @@ __version__ = ""
 __maintainer__ = "Filipp Frizzy"
 __email__ = "filipp.s.frizzy@gmail.com"
 __status__ = "Development"
+__version__ = '0.4'
