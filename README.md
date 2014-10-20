@@ -29,6 +29,8 @@ Alternatives:
 
 4) Use sshpass like ansible = external dependencies.
 
+5) Use local ssh server and run all commands through it instead of popen (we need to go deeper).
+
 Of course, you can write your own run() function with previous decisions and use it!
 
 #### Examples:
