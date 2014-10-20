@@ -50,13 +50,13 @@ cat factfile
 from factory.api import run
 
 def hello_fact():
-    run('echo "this if factfile"')
+    run('echo "this is factfile"')
 ```
 
 ```bash
 fact hello_fact
-frizzy@localhost in: echo "this if factfile"
-frizzy@localhost out: this if factfile
+frizzy@localhost in: echo "this is factfile"
+frizzy@localhost out: this is factfile
 ```
 
 * Using fabfile
@@ -67,13 +67,13 @@ cat fabfile
 from fabric.api import run
 
 def hello_fab():
-    run('echo "this if fabfile"')
+    run('echo "this is fabfile"')
 ```
 
 ```bash
 fact hello_fab
-frizzy@localhost in: echo "this if fabfile"
-frizzy@localhost out: this if fabfile
+frizzy@localhost in: echo "this is fabfile"
+frizzy@localhost out: this is fabfile
 ```
 
 * And even this
