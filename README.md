@@ -7,6 +7,21 @@ factory
 #### Description
 Automate your own tasks on pure python and execute it on remote or local hosts
 
+```bash
+fact "uptime | cowsay"
+frizzy@localhost in: uptime | cowsay
+frizzy@localhost out:  ______________________________________
+frizzy@localhost out: /  00:38:46 up 17 days, 8:39, 7 users, \
+frizzy@localhost out: \ load average: 0,95, 0,95, 0,94       /
+frizzy@localhost out:  --------------------------------------
+frizzy@localhost out:         \   ^__^
+frizzy@localhost out:          \  (oo)\_______
+frizzy@localhost out:             (__)\       )\/\
+frizzy@localhost out:                 ||----w |
+frizzy@localhost out:                 ||     ||
+```
+[original idea of example](https://github.com/kennethreitz/envoy)
+
 #### Long Description
 Factory is proof-of-concept realization of [fabric](https://github.com/fabric/fabric) with a number of differences:
 * run() function works in the same way with subprocess.popen under localhost as under ssh connect to remote host
