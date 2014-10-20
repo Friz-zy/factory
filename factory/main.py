@@ -514,15 +514,23 @@ def run_task(function, args, kwargs, common_env, connect_env):
 def stdin_loop():
     """Global loop: wait for sys.stdin and put line from it to global queue."""
     logging.debug('executing stdin_loop function')
+    win = os.name == 'nt'
     while True:
         try:
-            wait_read(sys.stdin.fileno())
+            # wait_read doesn't work on windows
+            if win:
+                from gevent import monkey
+                monkey.patch_sys()
+                l = sys.stdin.readline()
+            else:
+                wait_read(sys.stdin.fileno())
+                l = sys.stdin.readline()
+            logging.debug('message from sys.stdin: %s', l)
+            stdin_queue.put_nowait(l)
         except AttributeError:
             logging.error("can't process sys.stdout", exc_info=True)
             break
-        l = sys.stdin.readline()
-        logging.debug('message from sys.stdin: %s', l)
-        stdin_queue.put_nowait(l)
+
 
 if __name__ == '__main__':
     main()
