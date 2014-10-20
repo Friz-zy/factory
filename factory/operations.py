@@ -84,10 +84,7 @@ def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=Fa
         logger.debug('command: %s', command)
 
     # logging
-    try:
-        logger.info('in: %s', unicode(command, "UTF-8"))
-    except TypeError:
-        logger.info('in: %s', command)
+    write_message_to_log(command, 'in: ')
 
     stderr = PIPE
     if err_to_out:
