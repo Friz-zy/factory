@@ -32,6 +32,7 @@ def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=Fa
       2) Use pty.fork, waitpid, execv as pexcpect and sh = only unix, no separated stderr, hard to communicate.
       3) Use ssh-copy-id like sh module recommended = ask passwords only one first time.
       4) Use sshpass like ansible = external dependencies.
+      5) Use local ssh server and run all commands through it instead of popen.
 
     Args:
       command (str): command for executing
