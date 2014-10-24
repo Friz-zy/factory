@@ -76,3 +76,14 @@ def test_with_show():
             assert envs.common.interactive == True
             assert envs.common.show_errors == True
         assert original == envs.common.__dict__
+
+
+def test_with_settings():
+    original = envs.common.__dict__
+    with settings(hide('stdout'), show('stderr'), 'test', test1=False):
+        print envs.common
+        assert envs.common.interactive == False
+        assert envs.common.show_errors == True
+        assert envs.common.test == True
+        assert envs.common.test1 == False
+    assert envs.common.__dict__ == original

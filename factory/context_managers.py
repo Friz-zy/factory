@@ -5,7 +5,7 @@
 # This file is part of https://github.com/Friz-zy/factory
 
 import sys
-from contextlib import contextmanager, nested
+from contextlib import contextmanager, nested, GeneratorContextManager
 from main import logging, envs
 from state import AttributedDict
 
@@ -46,6 +46,26 @@ def show(*args, **kwargs):
         kwargs['interactive'] = show
         kwargs['show_errors'] = show
     return set_common_env(**kwargs)
+
+
+def settings(*args, **kwargs):
+    """Nested context managers and set envs.common atributes.
+
+    Args:
+      *args (tuple):
+        if argument is context manager, it will be nested
+        and if argument is just number, string or object, it will be used as key with value = True
+      **kwargs (dict): env.common will be updated by this dict
+
+    """
+    args = list(args)
+    for a in args:
+        if not type(a) is GeneratorContextManager:
+            args.remove(a)
+            if a not in kwargs.keys():
+                kwargs[a] = True
+    args.append(set_common_env(**kwargs))
+    return nested(*args)
 
 
 @contextmanager
@@ -194,6 +214,10 @@ def set_connect_env(connect_string, con_args=''):
             ))
         )
         # add logging to interactive output
+        # TODO:
+        # only if handlers still not exists
+        # it's prevent double output into stdout
+        # in "with set_connect_env" cases
         if envs.common.interactive:
             logging.debug('adding logging to interactive output')
             # only info for stdout
