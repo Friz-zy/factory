@@ -21,7 +21,7 @@ import subprocess
 path_to_factory = os.path.abspath(os.path.join(
                    os.path.dirname(os.path.realpath(__file__)),
                    '..'))
-sys.path.append(path_to_factory)
+sys.path.insert(0, path_to_factory)
 
 
 @pytest.fixture()
