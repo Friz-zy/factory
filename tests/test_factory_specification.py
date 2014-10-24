@@ -152,10 +152,16 @@ class TestFeedback:
         assert "/bin/sh: 1: qwertyuiop: not found" in out
 
     def test_should_communicate_with_stdin(self, capsys):
-        from subprocess import Popen, PIPE
-        p = Popen('echo "hello world!" | ./factory/main.py -p -H localhost,127.0.0.1 "python -c \'print raw_input()\'"',
-            stdout=PIPE, stderr=PIPE, shell=True
-        )
+        from subprocess import Popen, PIPE, call
+        try:
+            call("./factory/main.py")
+            p = Popen('echo "hello world!" | ./factory/main.py -p -H localhost,127.0.0.1 "python -c \'print raw_input()\'"',
+                    stdout=PIPE, stderr=PIPE, shell=True
+            )
+        except OSError:
+            p = Popen('echo "hello world!" | fact -p -H localhost,127.0.0.1 "python -c \'print raw_input()\'"',
+                stdout=PIPE, stderr=PIPE, shell=True
+            )
         out, err = p.communicate()
         assert out.find("out: hello world!", (out.find("out: hello world!") + 1)) != -1
 
