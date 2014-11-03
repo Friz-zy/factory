@@ -29,7 +29,7 @@ Attributes:
       hosts (tuple): tuple with connection strings like user@host:port, default is ['localhost']
       home_directory (str): path to default factory directory,
         uses for searching config and another files as and current directory,
-        default is os.path.join('~', '.factory')
+        default is join(expanduser('~'), '.factory')
 
     connect (AttributedDict class object): global class instance for connect environment
       connect_string (str): [user@]host[:port]
@@ -46,7 +46,7 @@ Attributes:
 
 # This file is part of https://github.com/Friz-zy/factory
 
-from os.path import join
+from os.path import join, expanduser
 import gevent.queue
 from gevent.local import local
 from socket import gethostname
@@ -113,7 +113,7 @@ envs.common = AttributedDict(
      'scp_args': '',
      'user': getuser(),
      'hosts': ['localhost'],
-     'home_directory': join('~', '.factory'),
+     'home_directory': join(expanduser('~'), '.factory'),
      }
 )
 
