@@ -55,6 +55,7 @@ if (major,minor) < (2,5):
 
 import imp
 import logging
+import logging.config
 import argparse
 from copy import copy
 
