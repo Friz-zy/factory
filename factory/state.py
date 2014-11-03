@@ -27,6 +27,9 @@ Attributes:
       scp_args (str): scp additional arguments, default is ''
       user (str): username for ssh login, default is current user (via getuser())
       hosts (tuple): tuple with connection strings like user@host:port, default is ['localhost']
+      home_directory (str): path to default factory directory,
+        uses for searching config and another files as and current directory,
+        default is os.path.join('~', '.factory')
 
     connect (AttributedDict class object): global class instance for connect environment
       connect_string (str): [user@]host[:port]
@@ -43,6 +46,7 @@ Attributes:
 
 # This file is part of https://github.com/Friz-zy/factory
 
+from os.path import join
 import gevent.queue
 from gevent.local import local
 from socket import gethostname
@@ -109,6 +113,7 @@ envs.common = AttributedDict(
      'scp_args': '',
      'user': getuser(),
      'hosts': ['localhost'],
+     'home_directory': join('~', '.factory'),
      }
 )
 
