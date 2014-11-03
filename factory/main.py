@@ -14,8 +14,9 @@ Example:
 
 Config files:
   Factory uses standart python logging module,
-    so you can set your own config via config file:
-      logging.ini, logging.json or logging.yaml
+    so you can set your own config via config files
+    in envs.common.home_directory and current directories:
+      logging.ini, logging.json and logging.yaml
     hardcode logging config:
       format=u'%(asctime)s  %(name)s\t%(levelname)-8s\t%(message)s',
       datefmt='%d %b %Y %H:%M:%S',
@@ -24,16 +25,19 @@ Config files:
       filemode='a',
       level=logging.INFO,
 
-  You can update envs.common dict via config file:
-    always load if exist: factory.ini or factory.json or factory.yaml
+  You can update envs.common dict via config files:
+    always load if exist: factory.ini and factory.json and factory.yaml
+    from envs.common.home_directory and current directories
     and --config PATH cli option
 
-  Load factfile:
-    always load if exist: factfile.py or factfile
+  Load factfiles:
+    always load if exist: factfile.py and factfile
+    from envs.common.home_directory and current directories
     and --factfile PATH cli option
 
   Load fabfile:
-    always load if exist: fabfile.py or fabfile
+    always load if exist: fabfile.py and fabfile
+    from envs.common.home_directory and current directories
     and --fabfile PATH cli option
 
 """
@@ -68,21 +72,32 @@ logging.basicConfig(
     level=logging.INFO,
 )
 
-try:
-    if os.path.exists('logging.ini'):
-        logging.config.fileConfig('logging.ini')
-    elif os.path.exists('logging.json'):
-        import json
-        with open('logging.json', 'r') as f:
-            config = json.load(f)
-        logging.config.dictConfig(config)
-    elif os.path.exists('logging.yaml'):
-        import yaml
-        with open('logging.yaml', 'r') as f:
-            config = yaml.load(f)
-        logging.config.dictConfig(config)
-except:
-    logging.error("can't load logging config, used standart configuration", exc_info=True)
+
+cfiles = [os.path.join(path, filename) \
+    for path in (envs.common.home_directory, '.') \
+        for filename in ('logging.%s' % frmt \
+            for frmt in ['ini', 'json', 'yaml'])
+]
+
+for filename in cfiles:
+    if os.path.exists(filename):
+        try:
+            if '.ini' in filename:
+                logging.config.fileConfig(filename)
+            elif '.json' in filename:
+                import json
+                with open(filename, 'r') as f:
+                    config = json.load(f)
+                logging.config.dictConfig(config)
+            elif '.yaml' in filename:
+                import yaml
+                with open(filename, 'r') as f:
+                    config = yaml.load(f)
+                logging.config.dictConfig(config)
+            else:
+                logging.error("can't determine file format for %s", filename)
+        except:
+            logging.error("can't load logging config, used standart configuration", exc_info=True)
 
 
 def main():
@@ -161,7 +176,8 @@ def load_config(config_file=''):
     """Set global variables.
 
     Check config_file path:
-      factory.ini or factory.json or factory.yaml
+      factory.ini and factory.json and factory.yaml
+      from envs.common.home_directory and current directories
       and --config PATH cli option
 
     Args:
@@ -172,39 +188,39 @@ def load_config(config_file=''):
     logging.debug('arguments from cli and another locals: %s', locals())
 
     # processing config file
-    for filename in (config_file, 'factory.ini', 'factory.json', 'factory.yaml'):
-        if os.path.exists(filename):
-            config_file = filename
-            break
-    logging.debug('config file: %s', config_file)
     if config_file:
-        if '.ini' in config_file:
+        cfiles = [config_file]
+    else:
+        cfiles = [os.path.join(path, filename) \
+            for path in (envs.common.home_directory, '.') \
+                for filename in ('factory.%s' % frmt \
+                    for frmt in ['ini', 'json', 'yaml'])
+        ]
+
+    for filename in cfiles:
+        if os.path.exists(filename):
+            logging.debug('config file: %s', filename)
             try:
-                from ConfigParser import ConfigParser
-            except ImportError:
-                from configparser import ConfigParser
-            c = ConfigParser()
-            try:
-                c.read(config_file)
-                envs.common.update(c.__dict__)
+                if '.ini' in filename:
+                    try:
+                        from ConfigParser import ConfigParser
+                    except ImportError:
+                        from configparser import ConfigParser
+                    c = ConfigParser()
+                    c.read(filename)
+                    envs.common.update(c.__dict__)
+                elif '.json' in filename:
+                    import json
+                    with open(filename, 'r') as f:
+                        envs.common.update(json.load(f))
+                elif '.yaml' in filename:
+                    import yaml
+                    with open(filename, 'r') as f:
+                        envs.common.update(yaml.load(f))
+                else:
+                    logging.error("can't determine file format for %s", filename)
             except:
-                logging.error("can't load config from %s", config_file, exc_info=True)
-        elif '.json' in config_file:
-            try:
-                import json
-                with open(config_file, 'r') as f:
-                    envs.common.update(json.load(f))
-            except:
-                logging.error("can't load config from %s", config_file, exc_info=True)
-        elif '.yaml' in config_file:
-            try:
-                import yaml
-                with open(config_file, 'r') as f:
-                    envs.common.update(yaml.load(f))
-            except:
-                logging.error("can't load config from %s", config_file, exc_info=True)
-        else:
-            logging.error("can't determine file format for %s", config_file)
+                logging.error("can't load config from %s", filename, exc_info=True)
 
     logging.debug('global environment: %s', envs.common)
 
@@ -213,7 +229,8 @@ def load_factfile(factfile=''):
     """Load factfile.
 
     Check factfile path:
-      factfile.py or factfile
+      factfile.py and factfile
+      from envs.common.home_directory and current directories
       and --config PATH cli option
 
     Args:
@@ -224,16 +241,21 @@ def load_factfile(factfile=''):
     logging.debug('arguments from cli and another locals: %s', locals())
 
     # processing factfile
-    for filename in (factfile, 'factfile.py', 'factfile'):
-        if os.path.exists(filename):
-            factfile = filename
-            break
-    logging.debug('factfile: %s', factfile)
     if factfile:
-        factfile = imp.load_source('factfile', factfile)
-        for key, value in factfile.__dict__.iteritems():
-            if callable(value):
-                envs.common.functions[key] = value
+        cfiles = [factfile]
+    else:
+        cfiles = [os.path.join(path, filename) \
+            for path in (envs.common.home_directory, '.') \
+                for filename in ('factfile', 'factfile.py')
+        ]
+
+    for filename in cfiles:
+        if os.path.exists(filename):
+            logging.debug('factfile: %s', filename)
+            factfile = imp.load_source('factfile', filename)
+            for key, value in factfile.__dict__.iteritems():
+                if callable(value):
+                    envs.common.functions[key] = value
 
     logging.debug('global environment: %s', envs.common)
 
@@ -242,7 +264,8 @@ def load_fabfile(fabfile=''):
     """Load fabfile.
 
     Check fabfile path:
-      fabfile.py or fabfile
+      fabfile.py and fabfile
+      from envs.common.home_directory and current directories
       and --config PATH cli option
 
     Args:
@@ -253,23 +276,28 @@ def load_fabfile(fabfile=''):
     logging.debug('arguments from cli and another locals: %s', locals())
 
     # processing fabfile
-    for filename in (fabfile, 'fabfile.py', 'fabfile'):
-        if os.path.exists(filename):
-            fabfile = filename
-            break
-    logging.debug('fabfile: %s', fabfile)
     if fabfile:
-        import tempfile
-        with open(fabfile, 'r') as fab:
-            src = fab.read().replace('fabric', 'factory')
-            temp = tempfile.NamedTemporaryFile()
-            temp.write(src)
-            temp.flush()
-            fabfile = imp.load_source('fabfile', temp.name)
-            temp.close()
-        for key, value in fabfile.__dict__.iteritems():
-            if callable(value):
-                envs.common.functions[key] = value
+        cfiles = [fabfile]
+    else:
+        cfiles = [os.path.join(path, filename) \
+            for path in (envs.common.home_directory, '.') \
+                for filename in ('fabfile', 'fabfile.py')
+        ]
+
+    for filename in cfiles:
+        if os.path.exists(filename):
+            logging.debug('fabfile: %s', filename)
+            import tempfile
+            with open(filename, 'r') as fab:
+                src = fab.read().replace('fabric', 'factory')
+                temp = tempfile.NamedTemporaryFile()
+                temp.write(src)
+                temp.flush()
+                fabfile = imp.load_source('fabfile', temp.name)
+                temp.close()
+            for key, value in fabfile.__dict__.iteritems():
+                if callable(value):
+                    envs.common.functions[key] = value
 
     logging.debug('global environment: %s', envs.common)
 
