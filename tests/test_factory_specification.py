@@ -215,6 +215,31 @@ class TestFeedback:
         # set defaults back
         factory.main.envs.common.show_errors = False
 
+class TestLoadFilesFromHomeDirectory:
+    def test_should_load_factfile(self, tmpdir, factfile, capsys):
+        sys.argv = ['factory.py', 'hello_fact']
+        with factory.context_managers.set_common_env(home_directory=str(tmpdir)):
+            factory.main.main()
+        out, err = capsys.readouterr()
+        assert "this if factfile" in out
+
+    def test_should_load_fabfile(self, tmpdir, fabfile, capsys):
+        sys.argv = ['factory.py', 'hello_fab']
+        with factory.context_managers.set_common_env(home_directory=str(tmpdir)):
+            factory.main.main()
+        out, err = capsys.readouterr()
+        assert "this if fabfile" in out
+
+    def test_should_load_common_config(self, tmpdir, config, capsys):
+        sys.argv = ['factory.py', "run::echo 'hello world!'"]
+        with factory.context_managers.set_common_env(home_directory=str(tmpdir)):
+            factory.main.main()
+        # set defaults back
+        factory.main.envs.common.split_function = ':'
+        out, err = capsys.readouterr()
+        assert "run::echo 'hello world!'" not in out
+        assert "hello world!" in out
+
 
 if __name__ == '__main__':
     pytest.main()
