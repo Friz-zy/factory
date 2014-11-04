@@ -215,6 +215,34 @@ class TestFeedback:
         # set defaults back
         factory.main.envs.common.show_errors = False
 
+    def test_should_write_stdin_into_log(self, capsys):
+        from subprocess import Popen, PIPE, call
+        try:
+            call("./factory/main.py")
+            p = Popen('echo "hello world!" | ./factory/main.py "python -c \'print raw_input()\'"',
+                    stdout=PIPE, stderr=PIPE, shell=True
+            )
+        except OSError:
+            p = Popen('echo "hello world!" | fact "python -c \'print raw_input()\'"',
+                stdout=PIPE, stderr=PIPE, shell=True
+            )
+        out, err = p.communicate()
+        assert 'in: hello world!' in out
+
+    def test_should_not_write_stdin_into_log(self, capsys):
+        from subprocess import Popen, PIPE, call
+        try:
+            call("./factory/main.py")
+            p = Popen('echo "hello world!" | ./factory/main.py --no-stdin-cache "python -c \'print raw_input()\'"',
+                    stdout=PIPE, stderr=PIPE, shell=True
+            )
+        except OSError:
+            p = Popen('echo "hello world!" | fact --no-stdin-cache "python -c \'print raw_input()\'"',
+                stdout=PIPE, stderr=PIPE, shell=True
+            )
+        out, err = p.communicate()
+        assert 'in: hello world!' in out
+
 class TestLoadFilesFromHomeDirectory:
     def test_should_load_factfile(self, tmpdir, factfile, capsys):
         sys.argv = ['factory.py', 'hello_fact']
