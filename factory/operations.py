@@ -298,6 +298,7 @@ def in_loop(p, common_env, connect_env):
                     if i >= lin:
                         # TODO: crossystem end of line \n \r \nr
                         logger.debug('flush %s to stdin', l)
+                        write_message_to_log(l.rstrip(), 'in: ')
                         p.stdin.write(l)
                         p.stdin.flush()
                     if queue.qsize() == 0:

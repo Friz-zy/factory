@@ -30,6 +30,7 @@ Attributes:
       home_directory (str): path to default factory directory,
         uses for searching config and another files as and current directory,
         default is join(expanduser('~'), '.factory')
+      store_stdin (bool): store messages from sys.stdin into log except password promts, default is True
 
     connect (AttributedDict class object): global class instance for connect environment
       connect_string (str): [user@]host[:port]
@@ -114,6 +115,7 @@ envs.common = AttributedDict(
      'user': getuser(),
      'hosts': ['localhost'],
      'home_directory': join(expanduser('~'), '.factory'),
+     'store_stdin': True,
      }
 )
 

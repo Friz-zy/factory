@@ -130,6 +130,9 @@ def main():
     # --show-errors
     if args.show_errors:
         envs.common.show_errors = args.show_errors
+    # --no-stdin-cache
+    if args.no_stdin_cache:
+        envs.common.store_stdin = False
     # -r -s shortcuts
     if args.sudo:
         args.command.insert(0, 'sudo')
@@ -396,6 +399,11 @@ Warning: don't use command arg1{1}arg2 format""".format(
         help='''show fact warnings and errors in or not in
   interactive mode, default is False'''
     )
+    parser.add_argument(
+        '--no-stdin-cache', dest='no_stdin_cache',
+        action='store_true', default=False,
+        help='''write messages from sys.stdin into log'''
+    )
     return parser.parse_args()
 
 
@@ -554,8 +562,9 @@ def stdin_loop():
             else:
                 wait_read(sys.stdin.fileno())
                 l = sys.stdin.readline()
-            logging.debug('message from sys.stdin: %s', l)
-            stdin_queue.put_nowait(l)
+            if l:
+                logging.debug('message from sys.stdin: %s', l)
+                stdin_queue.put_nowait(l)
         except AttributeError:
             logging.error("can't process sys.stdout", exc_info=True)
             break
