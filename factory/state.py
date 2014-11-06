@@ -42,6 +42,7 @@ Attributes:
       check_is_root (bool): True if connected as root, else False
 
   stdin_queue (gevent queue object): global queue for sys.stdin messages in interactive mode, default is gevent.queue.Queue()
+  connects (dict): dict with already exists envs.connect, used only by set_connect_env context manager
 
 """
 
@@ -122,3 +123,4 @@ envs.common = AttributedDict(
 envs.connect = AttributedDict()
 
 stdin_queue = gevent.queue.Queue()
+connects = {}
