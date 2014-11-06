@@ -7,7 +7,7 @@
 import sys
 from contextlib import contextmanager, nested, GeneratorContextManager
 from main import logging, envs
-from state import AttributedDict
+from state import connects
 
 
 def hide(*args):
@@ -192,49 +192,58 @@ def set_connect_env(connect_string, con_args=''):
         old_dict = {}
         old_dict.update(envs.connect.__dict__)
 
-        envs.connect.connect_string = connect_string
-        if envs.common.split_user in connect_string:
-            envs.connect.user, connect_string = connect_string.split(
-                envs.common.split_user
-            )
+        # check if connect already exists
+        cs = connect_string
+        if not envs.common.split_user in cs:
+                cs = envs.common.split_user.join((envs.common.user, cs))
+        if not envs.common.split_port in cs:
+                cs = envs.common.split_port.join((cs, str(envs.common.ssh_port)))
+        if cs in connects.keys():
+            envs.connect.replace(connects[cs])
+            yield envs.connect
         else:
-            envs.connect.user = envs.common.user
-        if envs.common.split_port in connect_string:
-            envs.connect.host, envs.connect.port = connect_string.split(
-                envs.common.split_port
-            )
-        else:
-            envs.connect.host = connect_string
-            envs.connect.port = envs.common.ssh_port
-        envs.connect.con_args = con_args
-        envs.connect.logger = logging.getLogger(
-            ''.join((envs.connect.user,
-                envs.common.split_user,
-                envs.connect.host
-            ))
-        )
-        # add logging to interactive output
-        # TODO:
-        # only if handlers still not exists
-        # it's prevent double output into stdout
-        # in "with set_connect_env" cases
-        if envs.common.interactive:
-            logging.debug('adding logging to interactive output')
-            # only info for stdout
-            info = logging.StreamHandler(sys.stdout)
-            info.addFilter(OnlyOneLevelLogs(logging.INFO))
-            info.setFormatter(logging.Formatter('%(name)s %(message)s'))
-            envs.connect.logger.addHandler(info)
-            # all another to stderr
-            error = logging.StreamHandler(sys.stderr)
-            error.addFilter(WithoutOneLevelLogs(logging.INFO))
-            error.setFormatter(logging.Formatter('%(name)s %(message)s'))
-            envs.connect.logger.addHandler(error)
-        from operations import check_is_root
-        with hide('stdout'):
-            envs.connect.check_is_root = check_is_root()
-        logging.debug('envs.connect: %s', envs.connect)
-        yield envs.connect
+            envs.connect.connect_string = connect_string
+            if envs.common.split_user in connect_string:
+                envs.connect.user, connect_string = connect_string.split(
+                    envs.common.split_user
+                )
+            else:
+                envs.connect.user = envs.common.user
+            if envs.common.split_port in connect_string:
+                envs.connect.host, envs.connect.port = connect_string.split(
+                    envs.common.split_port
+                )
+            else:
+                envs.connect.host = connect_string
+                envs.connect.port = envs.common.ssh_port
+            envs.connect.con_args = con_args
+            logger_name = ''.join((envs.connect.user,
+                        envs.common.split_user,
+                        envs.connect.host
+                    ))
+            if logger_name in logging.root.manager.loggerDict.keys():
+                envs.connect.logger = logging.getLogger(logger_name)
+            else:
+                envs.connect.logger = logging.getLogger(logger_name)
+                # add logging to interactive output
+                if envs.common.interactive:
+                    logging.debug('adding logging to interactive output')
+                    # only info for stdout
+                    info = logging.StreamHandler(sys.stdout)
+                    info.addFilter(OnlyOneLevelLogs(logging.INFO))
+                    info.setFormatter(logging.Formatter('%(name)s %(message)s'))
+                    envs.connect.logger.addHandler(info)
+                    # all another to stderr
+                    error = logging.StreamHandler(sys.stderr)
+                    error.addFilter(WithoutOneLevelLogs(logging.INFO))
+                    error.setFormatter(logging.Formatter('%(name)s %(message)s'))
+                    envs.connect.logger.addHandler(error)
+            from operations import check_is_root
+            with hide('stdout'):
+                envs.connect.check_is_root = check_is_root()
+            logging.debug('envs.connect: %s', envs.connect)
+            connects[cs] = envs.connect.__dict__
+            yield envs.connect
     finally:
         # Reinitialized global envs.connect as AttributedDict class.
         logging.debug('reinitialization global envs.connect as AttributedDict class')

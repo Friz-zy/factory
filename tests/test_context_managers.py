@@ -13,8 +13,10 @@ __status__ = "Development"
 
 import pytest
 from factory.api import *
+from test_factory_specification import hack
 
 def test_with_set_connect_env():
+    hack()
     assert envs.connect.__dict__ == {}
     with set_connect_env('localhost'):
         assert envs.connect.host == 'localhost'
@@ -25,6 +27,7 @@ def test_with_set_connect_env():
 
 
 def test_with_set_common_env():
+    hack()
     original = envs.common.__dict__
     with set_common_env('test'):
         assert envs.common.test == True
@@ -37,6 +40,7 @@ def test_with_set_common_env():
 
 
 def test_with_hide():
+    hack()
     with set_common_env('interactive', 'show_errors'):
         original = envs.common.__dict__
         # hide out only
@@ -58,6 +62,7 @@ def test_with_hide():
 
 
 def test_with_show():
+    hack()
     with set_common_env(interactive=False, show_errors=False):
         original = envs.common.__dict__
         # show out only
@@ -79,6 +84,7 @@ def test_with_show():
 
 
 def test_with_settings():
+    hack()
     original = envs.common.__dict__
     with settings(hide('stdout'), show('stderr'), 'test', test1=False):
         print envs.common
@@ -87,3 +93,23 @@ def test_with_settings():
         assert envs.common.test == True
         assert envs.common.test1 == False
     assert envs.common.__dict__ == original
+
+
+def test_issue_1(capsys):
+    """Test for https://github.com/Friz-zy/factory/issues/1"""
+    hack()
+    with set_connect_env('localhost'):
+        run('echo 000')
+        out, err = capsys.readouterr()
+        assert out.count('in: echo 000') == 1
+        assert out.count('out: 000') == 1
+        with set_connect_env('127.0.0.1'):
+            out = run('echo 111')
+            out, err = capsys.readouterr()
+            assert out.count('in: echo 111') == 1
+            assert out.count('out: 111') == 1
+            with set_connect_env('localhost'):
+                out = run('echo 222')
+                out, err = capsys.readouterr()
+                assert out.count('in: echo 222') == 1
+                assert out.count('out: 222') == 1
