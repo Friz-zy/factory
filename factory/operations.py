@@ -7,7 +7,6 @@
 from __future__ import with_statement
 
 import os
-import sys
 from copy import copy
 from shlex import split
 from getpass import getpass
@@ -15,10 +14,10 @@ from shutil import copy2, copytree
 import gevent
 from gevent.socket import wait_read, timeout
 from gevent.subprocess import Popen, PIPE, STDOUT
-from main import logging, envs, stdin_queue
+from main import envs, stdin_queue
 from context_managers import set_connect_env
 
-def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=False, input=None):
+def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=False, input=None, force=False, **kwargs):
     """Execute command on host via ssh or subprocess.
 
     TODO: check on windows - maybe it will not work on it
@@ -42,6 +41,8 @@ def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=Fa
       freturn (bool): return tuple if True, else return str, default is False
       err_to_out (bool): redirect stderr to stdout if True, default is False
       input (str or tuple of str): str will be flushed to stdin after executed command, default is None
+      force (bool): executing full operations even if envs.common.dry_run is True
+      **kwargs (dict): add only for supporting dry-run replacing
 
     Return:
       str if freturn is False: string that contained all stdout messages
@@ -51,6 +52,11 @@ def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=Fa
         int that mean return code of command
 
     """
+    # hack for dry-run
+    if envs.common.dry_run and not force:
+        from dry_operations import run
+        return run(command, use_sudo, user, group, freturn, err_to_out, input, **kwargs)
+
     logger = envs.connect.logger
     interactive = envs.common.interactive
     parallel = envs.common.parallel
@@ -59,29 +65,8 @@ def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=Fa
                            envs.connect.host))
     logger.debug('executing run function')
     logger.debug('arguments for executing and another locals: %s', locals())
-    # run as root
-    logger.debug('case use_sudo')
-    if use_sudo:
-        if not envs.connect.check_is_root:
-            if 'sudo' not in command.split():
-                command = " ".join(('sudo -S', command))
-        logger.debug('command: %s', command)
-    # switching user
-    logger.debug('case user')
-    if user:
-        if 'sudo' not in command.split():
-            command = " ".join(('sudo -S -u %s -s' % user, command))
-        else:
-            command.replace('sudo', 'sudo -u %s' % user)
-        logger.debug('command: %s', command)
-    # switching group
-    logger.debug('case group')
-    if group:
-        if 'sudo' not in command.split():
-            command = " ".join(('sudo -S -g %s -s' % group, command))
-        else:
-            command.replace('sudo', 'sudo -g %s' % group)
-        logger.debug('command: %s', command)
+
+    command = command_patching_for_sudo(command, use_sudo, user, group)
 
     # logging
     write_message_to_log(command, 'in: ')
@@ -154,6 +139,61 @@ def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=Fa
         return (sumout, sumerr, status)
     logger.debug('return sumout %s', sumout)
     return sumout
+
+
+def write_message_to_log(message='', prefix=''):
+    """Write message to info log.
+
+    Args:
+      message (str): message text
+      prefix (str): text will be displayed before message without space
+
+    """
+    logger = envs.connect.logger
+    try:
+        logger.info('%s%s', prefix, unicode(message, "UTF-8"))
+    except TypeError:
+        logger.info('%s%s', prefix, message)
+
+
+def command_patching_for_sudo(command, use_sudo=False, user='', group=''):
+    """Modify command with sudo prefix.
+
+    Args:
+      command (str): command for executing
+      use_sudo (bool): running with sudo prefix if True and current user not root, default is False
+      user (str): username for sudo -u prefix
+      group (str): group for sudo -g prefix
+
+    Return:
+      str : command for executing
+
+    """
+    logger = envs.connect.logger
+    # run as root
+    logger.debug('case use_sudo')
+    if use_sudo:
+        if not envs.connect.check_is_root:
+            if 'sudo' not in command.split():
+                command = " ".join(('sudo -S', command))
+        logger.debug('command: %s', command)
+    # switching user
+    logger.debug('case user')
+    if user:
+        if 'sudo' not in command.split():
+            command = " ".join(('sudo -S -u %s -s' % user, command))
+        else:
+            command.replace('sudo', 'sudo -u %s' % user)
+        logger.debug('command: %s', command)
+    # switching group
+    logger.debug('case group')
+    if group:
+        if 'sudo' not in command.split():
+            command = " ".join(('sudo -S -g %s -s' % group, command))
+        else:
+            command.replace('sudo', 'sudo -g %s' % group)
+        logger.debug('command: %s', command)
+    return command
 
 
 def out_loop(p, common_env, connect_env, err=False):
@@ -251,21 +291,6 @@ def out_loop(p, common_env, connect_env, err=False):
     return sumout
 
 
-def write_message_to_log(message='', prefix=''):
-    """Write message to info log.
-
-    Args:
-      message (str): message text
-      prefix (str): text will be displayed before message without space
-
-    """
-    logger = envs.connect.logger
-    try:
-        logger.info('%s%s', prefix, unicode(message, "UTF-8"))
-    except TypeError:
-        logger.info('%s%s', prefix, message)
-
-
 def in_loop(p, common_env, connect_env):
     """Loop for command stdin.
 
@@ -310,7 +335,7 @@ def in_loop(p, common_env, connect_env):
         gevent.sleep(0)
 
 
-def sudo(command, user='', group='', freturn=False, err_to_out=False, input=None):
+def sudo(command, user='', group='', freturn=False, err_to_out=False, input=None, **kwargs):
     """sudo is alias for run(use_sudo=True).
 
     Args:
@@ -320,6 +345,7 @@ def sudo(command, user='', group='', freturn=False, err_to_out=False, input=None
       freturn (bool): return tuple if True, else return str, default is False
       err_to_out (bool): redirect stderr to stdout if True, default is False
       input (str): str will be flushed to stdin after executed command, default is None
+      **kwargs (dict): add only for supporting dry-run replacing
 
     Return:
       str if freturn is False: string that contained all stdout messages
@@ -329,14 +355,16 @@ def sudo(command, user='', group='', freturn=False, err_to_out=False, input=None
         int that mean return code of command
 
     """
+    run = load_runtime_operation('run')
+
     logger = envs.connect.logger
     logger.debug('executing sudo function')
     logger.debug('arguments for executing and another locals: %s', locals())
-    return run(command, use_sudo=True, user=user, group=group, freturn=freturn, err_to_out=err_to_out, input=input)
+    return run(command, use_sudo=True, user=user, group=group, freturn=freturn, err_to_out=err_to_out, input=input, **kwargs)
 
 
-def local(command, use_sudo=False, user='', group='', freturn=False, err_to_out=False, input=None):
-    """Execute command on localhost via subprocess.
+def local(command, use_sudo=False, user='', group='', freturn=False, err_to_out=False, input=None, **kwargs):
+    """Execute command on localhost using current implementation of run function.
 
     Args:
       command (str): command for executing
@@ -346,6 +374,7 @@ def local(command, use_sudo=False, user='', group='', freturn=False, err_to_out=
       freturn (bool): return tuple if True, else return str, default is False
       err_to_out (bool): redirect stderr to stdout if True, default is False
       input (str): str will be flushed to stdin after executed command, default is None
+      **kwargs (dict): add only for supporting dry-run replacing
 
     Return:
       str if freturn is False: string that contained all stdout messages
@@ -355,11 +384,13 @@ def local(command, use_sudo=False, user='', group='', freturn=False, err_to_out=
         int that mean return code of command
 
     """
+    run = load_runtime_operation('run')
+
     logger = envs.connect.logger
     logger.debug('executing local function')
     logger.debug('arguments for executing and another locals: %s', locals())
     with set_connect_env('localhost', envs.connect.con_args):
-        return run(command, use_sudo=use_sudo, user=user, group=group, freturn=freturn, err_to_out=err_to_out, input=input)
+        return run(command, use_sudo=use_sudo, user=user, group=group, freturn=freturn, err_to_out=err_to_out, input=input, **kwargs)
 
 
 def check_is_root():
@@ -372,7 +403,7 @@ def check_is_root():
     logger = envs.connect.logger
     logger.debug('executing check_is_root function')
     logger.debug('arguments for executing and another locals: %s', locals())
-    out, err, status = run('id -u', freturn=True)
+    out, err, status = run('id -u', freturn=True, force=True)
     logger.debug('out %s, err %s, status %s', out, err, status)
     if not status:
         try:
@@ -382,7 +413,7 @@ def check_is_root():
     return False
 
 
-def push(src, dst='~/', pull=False):
+def push(src, dst='~/', pull=False, **kwargs):
     """Copying file or directory.
 
     Copy local file or directory to another host or another localhost place.
@@ -393,6 +424,7 @@ def push(src, dst='~/', pull=False):
       src (str): local file or directory
       dst (str): destination path, default is '~/'
       pull (bool): copy file from another host to localhost if True, default is False
+      **kwargs (dict): add only for supporting dry-run replacing
 
     Return:
       int that mean return code of command:
@@ -400,6 +432,11 @@ def push(src, dst='~/', pull=False):
         status of subprocess with scp
 
     """
+    # hack for dry-run
+    if envs.common.dry_run:
+        from dry_operations import push
+        return push(src, dst, pull, **kwargs)
+
     logger = envs.connect.logger
     host_string = ''.join((envs.connect.user,
                            '@',
@@ -449,17 +486,18 @@ def push(src, dst='~/', pull=False):
 
         # open new connect
         logger.debug('run command: %s', command)
-        sumout, sumerr, status = local(command, freturn=True)
+        sumout, sumerr, status = local(command, freturn=True, **kwargs)
 
         logger.debug('return status: %s', status)
         return status
 
-def pull(src, dst='.'):
+def pull(src, dst='.', **kwargs):
     """Alias for push(pull=False).
 
     Args:
       src (str): local file or directory
       dst (str): destination path, default is '.'
+      **kwargs (dict): add only for supporting dry-run replacing
 
     Return:
       int that mean return code of command:
@@ -467,30 +505,34 @@ def pull(src, dst='.'):
         status of subprocess with scp
 
     """
+    push = load_runtime_operation('push')
+
     logger = envs.connect.logger
     logger.debug('executing pull function')
     logger.debug('arguments for executing and another locals: %s', locals())
-    return push(src, dst, True)
+    return push(src, dst, True, **kwargs)
 
 
-def get(src, dst='.'):
+def get(src, dst='.', **kwargs):
     """Alias for pull()"""
     logger = envs.connect.logger
     logger.debug('executing get function')
     logger.debug('arguments for executing and another locals: %s', locals())
-    return pull(src, dst)
+    return pull(src, dst, **kwargs)
 
 
-def put(src, dst='~/'):
+def put(src, dst='~/', **kwargs):
     """Alias for push"""
+    push = load_runtime_operation('push')
+
     logger = envs.connect.logger
     logger.debug('executing put function')
     logger.debug('arguments for executing and another locals: %s', locals())
-    return push(src, dst)
+    return push(src, dst, **kwargs)
 
 
-def run_script(local_file, binary=None, freturn=False, err_to_out=False, input=None):
-    """Excecute script.
+def run_script(local_file, binary=None, freturn=False, err_to_out=False, input=None, **kwargs):
+    """Excecute script using current implementation of run function.
 
     Execute "binary < local_file" on localhost or via ssh.
     Uses run() function for executing.
@@ -501,6 +543,7 @@ def run_script(local_file, binary=None, freturn=False, err_to_out=False, input=N
       freturn (bool): return tuple if True, else return str, default is False
       err_to_out (bool): redirect stderr to stdout if True, default is False
       input (str): str will be flushed to stdin after executed command, default is None
+      **kwargs (dict): add only for supporting dry-run replacing
 
 
     Return:
@@ -510,6 +553,11 @@ def run_script(local_file, binary=None, freturn=False, err_to_out=False, input=N
         string that contained all stderr
         int that mean return code of command
     """
+    # hack for dry-run
+    if envs.common.dry_run:
+        from dry_operations import run_script
+        return run_script(local_file, binary, freturn, err_to_out, input, **kwargs)
+
     logger = envs.connect.logger
     host_string = ''.join((envs.connect.user,
                            '@',
@@ -518,13 +566,17 @@ def run_script(local_file, binary=None, freturn=False, err_to_out=False, input=N
     logger.debug('arguments for executing and another locals: %s', locals())
     if not binary:
         logger.debug('trying get binary from script file')
-        with open(local_file) as f:
-            l = f.readline()
-        logger.debug('firs line from script file: %s', l)
-        if l.startswith('#'):
-            binary = l.strip()[2:]
-            logger.debug('binary: %s', binary)
-        else:
+        try:
+            with open(local_file) as f:
+                l = f.readline()
+            logger.debug('firs line from script file: %s', l)
+            if l.startswith('#'):
+                binary = l.strip()[2:]
+                logger.debug('binary: %s', binary)
+            else:
+                binary = 'sh -s'
+                logger.debug('used default binary: %s', binary)
+        except IOError:
             binary = 'sh -s'
             logger.debug('used default binary: %s', binary)
 
@@ -543,20 +595,40 @@ def run_script(local_file, binary=None, freturn=False, err_to_out=False, input=N
 
     # open new connect
     logger.debug('run command: %s', command)
-    return local(command, freturn=freturn, err_to_out=err_to_out, input=input)
+    return local(command, freturn=freturn, err_to_out=err_to_out, input=input, **kwargs)
 
 
-def open_shell(command=None, shell='/bin/bash -i'):
-    """Open shell on host via ssh or subprocess.
+def open_shell(command=None, shell='/bin/bash -i', **kwargs):
+    """Open shell on host using current implementation of run function.
 
     Args:
       command (str): str will be flushed to stdin after opening shell, default is None
       shell (str): shell for opening, default is '/bin/bash -i'
+      **kwargs (dict): add only for supporting dry-run replacing
 
     #FIXME: on localhost after each command moves to background
 
     """
+    run = load_runtime_operation('run')
+
     logger = envs.connect.logger
     logger.debug('executing open_shell function')
     logger.debug('arguments for executing and another locals: %s', locals())
-    run(shell, err_to_out=True, input=command)
+    run(shell, err_to_out=True, input=command, **kwargs)
+
+
+def load_runtime_operation(fname):
+    """Import function from envs.common.functions or operations module.
+
+    Args:
+      fname (str): function name
+
+    Return:
+      function object: function object appropriate function name
+
+    """
+    try:
+        fname = envs.common.functions[fname]
+    except KeyError:
+        from operations import fname
+    return fname
