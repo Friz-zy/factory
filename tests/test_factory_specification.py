@@ -21,6 +21,7 @@ import factory
 def hack():
     factory.main.logging.root.manager.loggerDict = {}
     factory.context_managers.connects = {}
+    factory.main.envs.common.dry_run = False
 
 class TestAPI:
     def test_should_import_api(self):

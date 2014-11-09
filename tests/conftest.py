@@ -81,7 +81,7 @@ def standalone_factfile(tmpdir):
 """#!/usr/bin/env python
 # coding=utf-8
 
-from factory.api import run, set_connect_env
+from factory.api import *
 
 def main():
     with set_connect_env('localhost'):
