@@ -65,7 +65,7 @@ def run(command, use_sudo=False, user='', group='', freturn=False, err_to_out=Fa
         ncommand = ''
         command = re.split('\\&|\\||\\;', command)
         for part in command:
-            ncommand += '{} {}; '.format(
+            ncommand += '{0} {1}; '.format(
                 envs.common.which_binary,
                 re.findall(r"[\w']+", part)[0]
             )
@@ -138,7 +138,7 @@ def push(src, dst='~/', pull=False, use_test=True, status=0):
             from operations import run
         if pull:
             if use_test:
-                command = '{} {}'.format(
+                command = '{0} {1}'.format(
                     envs.common.test_binary,
                     src
                 )
@@ -167,7 +167,7 @@ def push(src, dst='~/', pull=False, use_test=True, status=0):
                 logger.debug('os.path.exists(src) is False')
                 write_message_to_log('path \'%s\' is not exists' % src, 'dry-out: ')
             if use_test:
-                command = '{} {}'.format(
+                command = '{0} {1}'.format(
                     envs.common.test_binary,
                     dst
                 )
