@@ -133,6 +133,9 @@ def main():
     # --no-stdin-cache
     if args.no_stdin_cache:
         envs.common.store_stdin = False
+    # dry-run
+    if args.dry_run:
+       envs.common.dry_run = True
     # -r -s shortcuts
     if args.sudo:
         args.command.insert(0, 'sudo')
@@ -403,6 +406,11 @@ Warning: don't use command arg1{1}arg2 format""".format(
         '--no-stdin-cache', dest='no_stdin_cache',
         action='store_true', default=False,
         help='''write messages from sys.stdin into log'''
+    )
+    parser.add_argument(
+        '--dry-run', dest='dry_run',
+        action='store_true', default=False,
+        help='''check system without actually running operations'''
     )
     return parser.parse_args()
 
