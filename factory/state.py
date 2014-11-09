@@ -31,6 +31,10 @@ Attributes:
         uses for searching config and another files as and current directory,
         default is join(expanduser('~'), '.factory')
       store_stdin (bool): store messages from sys.stdin into log except password promts, default is True
+      dry_run (bool): use dummy operations from dry_operations, default is False
+      which_binary (str): binary for checking executing binary in dry-run mod, default is 'which',
+        for windows 'where.exe' can be used manually
+      test_binary (str): binary for checking file or directory existing in dry-run mod, default is 'test -e'
 
     connect (AttributedDict class object): global class instance for connect environment
       connect_string (str): [user@]host[:port]
@@ -117,6 +121,9 @@ envs.common = AttributedDict(
      'hosts': ['localhost'],
      'home_directory': join(expanduser('~'), '.factory'),
      'store_stdin': True,
+     'dry_run': False,
+     'which_binary': 'which',
+     'test_binary': 'test -e',
      }
 )
 
