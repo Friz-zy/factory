@@ -405,7 +405,7 @@ Warning: don't use command arg1{1}arg2 format""".format(
     parser.add_argument(
         '--no-stdin-cache', dest='no_stdin_cache',
         action='store_true', default=False,
-        help='''write messages from sys.stdin into log'''
+        help='''don't write messages from sys.stdin into log'''
     )
     parser.add_argument(
         '--dry-run', dest='dry_run',
