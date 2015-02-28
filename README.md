@@ -1,6 +1,6 @@
 factory
 =======
-[![MIT](http://img.shields.io/badge/License-MIT-green.svg)](https://github.com/Friz-zy/factory/blob/master/LICENSE)  [![Python 2.7](http://img.shields.io/badge/Python-2.5--2.7-yellowgreen.svg)](https://www.python.org/)  [![gevent](http://img.shields.io/badge/Based-Gevent-yellow.svg)](https://pypi.python.org/pypi/gevent/1.0.1)
+[![MIT](http://img.shields.io/badge/License-MIT-green.svg)](https://github.com/Friz-zy/factory/blob/master/LICENSE)  [![Python 2.7](http://img.shields.io/badge/Python-2.6--2.7-yellowgreen.svg)](https://www.python.org/)  [![gevent](http://img.shields.io/badge/Based-Gevent-yellow.svg)](https://pypi.python.org/pypi/gevent/1.0.1)
 
 [![Build Status](https://travis-ci.org/Friz-zy/factory.svg?branch=master)](https://travis-ci.org/Friz-zy/factory) [![Coverage Status](https://img.shields.io/coveralls/Friz-zy/factory.svg)](https://coveralls.io/r/Friz-zy/factory)
 
@@ -127,6 +127,8 @@ test@127.0.0.1 out: hello, test
 #### [WiKi](https://github.com/Friz-zy/factory/wiki) will be soon
 
 #### [Board](https://trello.com/b/TNRr7EbW/factory) on [trello](https://trello.com)
+
+#### For contributors: [fetch and merge, don’t pull](http://longair.net/blog/2009/04/16/git-fetch-and-merge/)
 
 #### Contributors
 * [Filipp Kucheryavy aka Frizzy](mailto:filipp.s.frizzy@gmail.com)
