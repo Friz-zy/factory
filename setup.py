@@ -32,7 +32,7 @@ long_description=open(join(dirname(__file__), 'README.md')).read(),
 packages=find_packages(),
 cmdclass = {'test': PyTest},
 tests_require=['pytest', 'pytest_capturelog', 'pytest-cov'],
-install_requires=['gevent', 'argparse'],
+install_requires=['gevent', 'argparse', 'PyYAML'],
 entry_points={
 'console_scripts': [
 'fact = factory.main:main',
